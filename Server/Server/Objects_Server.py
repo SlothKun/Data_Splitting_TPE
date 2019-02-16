@@ -13,8 +13,6 @@ import pyDH
 from Crypto.Cipher import AES
 from Crypto import Random
 
-
-
 class Server:
     def __init__(self):
         self.host = '127.0.0.1'
@@ -22,16 +20,15 @@ class Server:
         self.whitelisted_client = ["172.16.1.42", "127.0.0.1", "192.168.0.33", "192.168.0.34", "172.16.1.19"]
         self.socket = ""
         self.message_content = b""
-        self.init = False
 
     def server_activation(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((self.host, self.port_listening))
         s.listen(2)
-        self.etablishing_conn(s)
+        self.establishing_conn(s)
 
-    def etablishing_conn(self, sock):
+    def establishing_conn(self, sock):
         clientconnect, clientinfo = sock.accept()
         self.socket = sock
         ip, port = clientconnect.getpeername()
@@ -57,12 +54,6 @@ class Server:
             self.socket.sendall(b"pong")
         elif self.message_content.decode() == "received":
             pass
-        elif self.message_content.decode() == "init":
-            self.socket.sendall(b"received")
-            self.init = True
-        elif self.message_content.decode() == "tini":
-            self.socket.sendall(b"received")
-            self.init = False
         else:
             self.socket.sendall(b"received")
             return self.message_content.decode()
@@ -86,12 +77,12 @@ class Server:
 
 class File:
     def __init__(self):
-        self.received_data = ""
+        self.decrypted_data = ""
         self.file_sum = ""
         self.delimiter = b"#&_#"
 
     def get_file_information(self, file):
-        self.received_data = file.decode()
+        self.decrypted_data = file.decode()
         self.file_sum = file.split(self.delimiter)[1]
 
     def file_integrity_check(self):  # Simply compare the actual file sum with given sum
@@ -180,10 +171,12 @@ class Key:
         return formatted
 
     def get_big_key_nonce(self, data):
-        self.big_key_original = data.split(self.delimiter)[0]
-        self.big_nonce_original = data.split(self.delimiter)[1]
-        if data.split(self.delimiter)[2] != None:
-            return data
+        if re.findall("[a-g]*[A-G]*1*5*", data.split(self.delimiter)[0]).decode() != False:
+            self.big_key_original = data.split(self.delimiter)[1].decode()
+            self.big_nonce_original = data.split(self.delimiter)[2].decode()
+        elif re.findall("[o-u]*[O-U]*3*7*",data.split(self.delimiter[0])).decode() != False:
+            reformatted_data = data.split(self.delimiter)[1].decode() + self.delimiter + data.split(self.delimiter)[2].decode()
+            return reformatted_data.encode()
 
 
 class AES_Algorithm:

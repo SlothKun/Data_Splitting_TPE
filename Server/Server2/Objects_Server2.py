@@ -7,7 +7,7 @@ class Server:
         self.port_listening = 6801
         self.port_listening2 = 6802
         self.nickname = "Server1"
-        self.whitelisted_client = ["172.16.1.42", "127.0.0.1", "192.168.0.33", "192.168.0.34", "172.16.1.19"]
+        self.whitelisted_client = ["127.0.0.1"]
         self.connected_client = []
         self.who_sent = ""
         self.who_to_send = ""

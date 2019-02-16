@@ -19,7 +19,7 @@ class Server:
     def __init__(self):
         self.host = '127.0.0.1'
         self.port_listening = 6800
-        self.whitelisted_client = ["172.16.1.42", "127.0.0.1", "192.168.0.33", "192.168.0.34", "172.16.1.19"]
+        self.whitelisted_client = ["127.0.0.1"]
         self.socket = ""
         self.message_content = b""
         self.init = False

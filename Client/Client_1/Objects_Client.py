@@ -20,14 +20,13 @@ class Client:
         self.port_listening = port
         self.socket = ""
         self.message_content = b""
-        self.init = False
 
     def client_activation(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.etablishing_conn(s)
+        self.establishing_conn(s)
 
-    def etablishing_conn(self, sock):
+    def establishing_conn(self, sock):
         try:
             sock.connect((self.serverhost, self.port_listening))
             self.socket = sock
@@ -49,12 +48,6 @@ class Client:
             self.socket.sendall(b"pong")
         elif self.message_content.decode() == "received":
             pass
-        elif self.message_content.decode() == "init":
-            self.socket.sendall(b"received")
-            self.init = True
-        elif self.message_content.decode() == "tini":
-            self.socket.sendall(b"received")
-            self.init = False
         else:
             self.socket.sendall(b"received")
             return self.message_content.decode()
@@ -117,13 +110,13 @@ class File:
             file_sum_from_part = []
             for data in file:
                 splitted_informations = data.replace(self.delimiter2, self.delimiter1).split(self.delimiter1)
-                if re.findall("[a-m]*[0-4]*", splitted_informations[0].decode()) != None:  # Decode first part and get info
+                if re.findall("[a-g]*[A-G]*1*4*", splitted_informations[0].decode()) != False:  # Decode first part and get info
                     self.file_part1_sum = splitted_informations[1].decode()
                     extension_from_part.append(splitted_informations[2].decode())
                     file_sum_from_part.append(splitted_informations[3].decode())
                     name_from_part.append(splitted_informations[4].decode())
                     self.unrecrypted_file_part1 = splitted_informations[5]
-                elif re.findall("[n-z]*[5-9]*", splitted_informations[0].decode()) != None:  # It decode the second part of file and get sum, file, filename..
+                elif re.findall("[h-n]*[H-N]*4*8*9*", splitted_informations[0].decode()) != False:  # It decode the second part of file and get sum, file, filename..
                     self.file_part1_sum = splitted_informations[1].decode()
                     self.file_part2_sum = splitted_informations[1].decode()
                     extension_from_part.append(splitted_informations[2].decode())
@@ -166,16 +159,16 @@ class File:
         self.file_part1_sum = hashlib.sha512(self.unrecrypted_file_part1).hexdigest()
         self.file_part2_sum = hashlib.sha512(self.unrecrypted_file_part2).hexdigest()
 
-    def format_file(self):  # Arrange the each file in order to know what information is what
-        self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1) + self.delimiter2 + str(self.file_part1_sum) + self.delimiter2 + self.file_extension + self.delimiter1 + str(self.file_sum) + self.delimiter1 + self.file_name + self.delimiter1 + self.unrecrypted_file_part1
-        self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2) + self.delimiter2 + str(self.file_part2_sum) + self.delimiter2 + self.file_extension + self.delimiter1 + str(self.file_sum) + self.delimiter1 + self.file_name + self.delimiter1 + self.unrecrypted_file_part2
+    def format_file(self, full_file_tag):  # Arrange the each file in order to know what information is what
+        self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1) + self.delimiter2 + str(self.file_part1_sum) + self.delimiter2 + self.file_extension + self.delimiter1 + str(self.file_sum) + self.delimiter1 + self.file_name + self.delimiter1 + str(full_file_tag) + self.delimiter1 + self.unrecrypted_file_part1
+        self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2) + self.delimiter2 + str(self.file_part2_sum) + self.delimiter2 + self.file_extension + self.delimiter1 + str(self.file_sum) + self.delimiter1 + self.file_name + self.delimiter1 + str(full_file_tag) + self.delimiter1 + self.unrecrypted_file_part2
         return self.full_format_file_part1.encode(), self.full_format_file_part2.encode()
 
     def part_format_generator(self, size, part_number):  # It create random string that'll to know what is each part
         if part_number == 1:
-            return ''.join(rstr.rstr("abcdefghijklmABCDEFGHIJKLM01234", size))
+            return ''.join(rstr.rstr("hijklmnHIJKLMN26", size))
         elif part_number == 2:
-            return ''.join(rstr.rstr("nopqrstuvwxyzNOPQRSTUVWXYZ56789", size))
+            return ''.join(rstr.rstr("vwxyzVWXYZ489", size))
 
     def file_integrity_check(self, file, sum):  # Simply compare the actual file sum with given sum
         if hashlib.sha512(file).hexdigest() == sum:
@@ -258,13 +251,22 @@ class Key:
             self.k_choice = 0
             self.key = self.big_key_modified[-64:-32]
 
-    def big_key_nonce_format(self):
-        formatted = self.big_key_original + self.delimiter + self.big_nonce_original
-        return formatted
-
     def get_big_key_nonce(self, data):
         self.big_key_original = data.split(self.delimiter)[0]
         self.big_nonce_original = data.split(self.delimiter)[1]
+
+    def big_key_nonce_format(self, client=False):
+        if client == True:
+            formatted = self.recipient_format_generator(random.randint(5, 10), 1) + self.delimiter + self.big_key_original + self.delimiter + self.big_nonce_original
+        else:
+            formatted = self.recipient_format_generator(random.randint(5, 10), 2) + self.delimiter + self.big_key_original + self.delimiter + self.big_nonce_original
+        return formatted
+
+    def recipient_format_generator(self, size, who_number):  # It create random string that'll to know what is each part
+        if who_number == 1:
+            return ''.join(rstr.rstr("opqrstuOPQRSTU37", size))
+        elif who_number == 2:
+            return ''.join(rstr.rstr("abcdefgABCDEFG15", size))
 
 
 class AES_Algorithm:

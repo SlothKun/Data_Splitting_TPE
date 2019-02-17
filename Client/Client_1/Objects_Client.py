@@ -20,6 +20,7 @@ class Client:
         self.port_listening = port
         self.socket = ""
         self.message_content = b""
+        self.connected = False
 
     def client_activation(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -28,11 +29,12 @@ class Client:
 
     def establishing_conn(self, sock):
         try:
-            sock.connect((self.serverhost, self.port_listening))
-            self.socket = sock
-            print("connected")
+            if self.connected == False:
+                sock.connect((self.serverhost, self.port_listening))
+                self.socket = sock
+                self.connected = True
         except (ConnectionRefusedError, OSError):
-                self.etablishing_conn(sock)
+                self.establishing_conn(sock)
 
     def receiving(self):
         try:
@@ -46,10 +48,7 @@ class Client:
     def answer(self):
         if self.message_content.decode() == "ping":
             self.socket.sendall(b"pong")
-        elif self.message_content.decode() == "received":
-            pass
         else:
-            self.socket.sendall(b"received")
             return self.message_content.decode()
 
     def sending(self, *datas):
@@ -58,11 +57,11 @@ class Client:
             file += str(data)
         self.socket.sendall(file.encode())
 
-    def ping(self):  # send ping to verify if server is ok
+    def ping(self):  # send ping to verify if server is ok | modify
         self.socket.sendall(b"ping")
         self.ping_check()
 
-    def ping_check(self):  # verify if server answer to the ping, if not, he closes conn
+    def ping_check(self):  # verify if server answer to the ping, if not, he closes conn | modify
         msg_received = self.socket.recv(2048)
         if msg_received.decode() != "pong":
             print("The client ", self.socket, " didn't answer to the ping correctly. disconnection to the client..")
@@ -70,7 +69,7 @@ class Client:
             self.socket.close()
 
 
-class File:
+class File:  # modify
     def __init__(self):
         self.received_data = ""
         self.uncrypted_full_file = ""
@@ -126,6 +125,7 @@ class File:
 
             part_1_list = [extension_from_part[0], name_from_part[0], file_sum_from_part[0]]  # List of information to compare
             part_2_list = [extension_from_part[1], name_from_part[1], file_sum_from_part[1]]
+            # not sure it's useful
             i = 0
             for parameter_part1, parameter_part2 in zip(part_1_list, part_2_list):  # Compare each information in list, if match, put it in variable associated, if not, print it
                 if parameter_part1 == parameter_part2:
@@ -144,9 +144,14 @@ class File:
                         print("both sum doesn't match")
                 i += 1
 
-    def split_file(self):  # Take 1 file and split into 2 files
-        self.unrecrypted_file_part1 = self.uncrypted_full_file[:int(self.length_byte_file/2)]
-        self.unrecrypted_file_part2 = self.uncrypted_full_file[int(self.length_byte_file/2):]
+    def split_file(self, data):  # Take 1 file and split into 2 files
+        if data == 0:
+            self.unrecrypted_file_part1 = self.uncrypted_full_file[:int(self.length_byte_file/2)]
+            self.unrecrypted_file_part2 = self.uncrypted_full_file[int(self.length_byte_file/2):]
+        else:
+            splitted_data1 = str(data[:int(data/2)])
+            splitted_data2 = str(data[int(data/2):])
+            return splitted_data1, splitted_data2
 
     def reassemble_file(self):  # Take 2 given file and add them together
         f = open(self.file_name + "." + self.file_extension, "wb")
@@ -154,14 +159,12 @@ class File:
         f.write(str(self.uncrypted_full_file))
         f.close()
 
-    def SHA512_checksum_creation(self):  # Can be modify to create sum of 3 files in 1 call
-        self.file_sum = hashlib.sha512(self.uncrypted_full_file).hexdigest()
-        self.file_part1_sum = hashlib.sha512(self.unrecrypted_file_part1).hexdigest()
-        self.file_part2_sum = hashlib.sha512(self.unrecrypted_file_part2).hexdigest()
+    def SHA512_checksum_creation(self, file):
+        return hashlib.sha512(file).hexdigest()
 
-    def format_file(self, full_file_tag):  # Arrange the each file in order to know what information is what
-        self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1) + self.delimiter2 + str(self.file_part1_sum) + self.delimiter2 + self.file_extension + self.delimiter1 + str(self.file_sum) + self.delimiter1 + self.file_name + self.delimiter1 + str(full_file_tag) + self.delimiter1 + self.unrecrypted_file_part1
-        self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2) + self.delimiter2 + str(self.file_part2_sum) + self.delimiter2 + self.file_extension + self.delimiter1 + str(self.file_sum) + self.delimiter1 + self.file_name + self.delimiter1 + str(full_file_tag) + self.delimiter1 + self.unrecrypted_file_part2
+    def format_file(self):  # Arrange the each file in order to know what information is what
+        self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1) + self.delimiter2 + str(self.file_part1_sum) + self.delimiter1 + self.file_extension + self.delimiter1 + str(self.file_sum) + self.delimiter1 + self.file_name + self.delimiter1 + self.unrecrypted_file_part1
+        self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2) + self.delimiter2 + str(self.file_part2_sum) + self.delimiter1 + self.file_extension + self.delimiter1 + str(self.file_sum) + self.delimiter1 + self.file_name + self.delimiter1 + self.unrecrypted_file_part2
         return self.full_format_file_part1.encode(), self.full_format_file_part2.encode()
 
     def part_format_generator(self, size, part_number):  # It create random string that'll to know what is each part
@@ -191,14 +194,14 @@ class DH_algorithm:
     def private_key_generator(self, friendkey):
         self.private_key = self.engine.gen_shared_key(int(friendkey))
 
-    def encrypt(self, key_to_encrypt):
+    def encrypt(self, data):
         cipher = AES.new(self.private_key.encode(), AES.MODE_OCB)
-        crypted_key, tag = cipher.encrypt_and_digest(key_to_encrypt)
-        return crypted_key, tag
+        crypted_key, tag = cipher.encrypt_and_digest(data)
+        return crypted_key
 
-    def decrypt(self, crypted_key, tag):
+    def decrypt(self, data, tag):
         cipher = AES.new(self.private_key.encode(), AES.MODE_OCB)
-        uncrypted_key = cipher.decrypt_and_verify(crypted_key, tag)
+        uncrypted_key = cipher.decrypt(data)
         return uncrypted_key
 
 
@@ -227,7 +230,7 @@ class Key:
             self.big_nonce_modified = self.big_nonce_original
         elif len(self.big_key_modified) <= 64:
             self.big_key_nonce_generator()
-            print("NEED RENVOI KEY")
+            print("NEED RENVOI KEY")  # handle key sending
 
     def nonce_choice(self):
         if self.n_choice == 0:
@@ -252,21 +255,14 @@ class Key:
             self.key = self.big_key_modified[-64:-32]
 
     def get_big_key_nonce(self, data):
-        self.big_key_original = data.split(self.delimiter)[0]
-        self.big_nonce_original = data.split(self.delimiter)[1]
+        checksum = data.split(self.delimiter)[0]
+        self.big_key_original = data.split(self.delimiter)[1]
+        self.big_nonce_original = data.split(self.delimiter)[2]
+        return checksum
 
-    def big_key_nonce_format(self, client=False):
-        if client == True:
-            formatted = self.recipient_format_generator(random.randint(5, 10), 1) + self.delimiter + self.big_key_original + self.delimiter + self.big_nonce_original
-        else:
-            formatted = self.recipient_format_generator(random.randint(5, 10), 2) + self.delimiter + self.big_key_original + self.delimiter + self.big_nonce_original
+    def big_key_nonce_format(self):
+        formatted = self.delimiter + self.big_key_original + self.delimiter + self.big_nonce_original
         return formatted
-
-    def recipient_format_generator(self, size, who_number):  # It create random string that'll to know what is each part
-        if who_number == 1:
-            return ''.join(rstr.rstr("opqrstuOPQRSTU37", size))
-        elif who_number == 2:
-            return ''.join(rstr.rstr("abcdefgABCDEFG15", size))
 
 
 class AES_Algorithm:
@@ -274,21 +270,18 @@ class AES_Algorithm:
         self.data = ""
         self.key = ""
         self.nonce = ""
-        self.tag = ""
 
-    def update_data(self, data, key, nonce, tag):
+    def update_data(self, data, key, nonce):
         self.data = data
         self.key = key
         self.nonce = nonce
-        self.tag = tag
 
     def encrypt(self):
         cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
         crypted_data, tag = cipher.encrypt_and_digest(self.data)
-        return crypted_data, tag
+        return crypted_data
 
     def decrypt(self):
         cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
-        uncrypted_data = cipher.decrypt_and_verify(self.crypted_full_file, self.tag)
+        uncrypted_data = cipher.decrypt(self.crypted_full_file)
         return uncrypted_data
-

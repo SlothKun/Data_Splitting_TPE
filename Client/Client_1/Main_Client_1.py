@@ -15,14 +15,14 @@ KeyFile_Server2 = Objects_Client.Key()
 KeyFile_Client = Objects_Client.Key()
 
 # Create File and AES objects
-AES_Encrypt = Objects_Client.AES_Algorithm()
+AES_Encryption = Objects_Client.AES_Algorithm()
 File_Manipulation = Objects_Client.File()
 
 # Create some variable
-my_turn = False
-S1_connected = True
-S2_connected = True
-DH_initialised = False
+my_turn = True
+S1_connected = False
+S2_connected = False
+DH_initialised = True
 Key_initialised = False
 DH_PubKey = []
 Big_key_nonce = []
@@ -87,9 +87,36 @@ def Key_init():
         Key_initialised = False
 
 def Sending_file():
+    # Reset File_manipulation init
+    File_Manipulation.reset_init()
+    # Verify length of nonce and key and take one nonce for each objects
+    KeyFile_Client.key_nonce_length_check()
+    KeyFile_Server1.key_nonce_length_check()
+    KeyFile_Server2.key_nonce_length_check()
+    KeyFile_Client.nonce_choice()
+    KeyFile_Server1.nonce_choice()
+    KeyFile_Server2.nonce_choice()
+    # Full file manipulation
+    File_Manipulation.ask_file()
+    AES_Encryption.update_data((File_Manipulation.file_sum + File_Manipulation.delimiter1 + File_Manipulation.uncrypted_full_file), KeyFile_Client.key, KeyFile_Client.nonce)
+    crypted_full_file = AES_Encryption.encrypt()
+    File_Manipulation.Crypted_full_file = crypted_full_file
+    # Part manipulation
+    File_Manipulation.split_file(0)
+    File_Manipulation.format_file(0)
+    File_Manipulation.file_part1_sum = File_Manipulation.SHA512_checksum_creation(File_Manipulation.full_format_file_part1)
+    File_Manipulation.file_part2_sum = File_Manipulation.SHA512_checksum_creation(File_Manipulation.full_format_file_part2)
+    File_Manipulation.format_file(1)
+    AES_Encryption.update_data(File_Manipulation.full_format_file_part1, KeyFile_Server1.key, KeyFile_Server1.nonce)
+    File_Manipulation.crypted_file_part1 = AES_Encryption.encrypt()
+    AES_Encryption.update_data(File_Manipulation.full_format_file_part2, KeyFile_Server2.key, KeyFile_Server2.nonce)
+    File_Manipulation.crypted_file_part2 = AES_Encryption.encrypt()
+    Server1_conn.sending(File_Manipulation.crypted_file_part1)
+    Server2_conn.sending(File_Manipulation.crypted_file_part2)
 
 def Receiving_file():
-i=0
+
+
 while True:
     if not S1_connected:
         Conn_S(1)

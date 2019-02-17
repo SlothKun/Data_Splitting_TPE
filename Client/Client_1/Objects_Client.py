@@ -91,6 +91,25 @@ class File:  # modify
         self.crypted_file_part2 = ""
         self.full_format_file_part2 = ""
 
+    def reset_init(self):
+        self.received_data = ""
+        self.uncrypted_full_file = ""
+        self.file_name = ""
+        self.file_extension = ""
+        self.file_sum = ""
+        self.length_byte_file = 0
+        self.crypted_full_file = ""
+
+        self.unrecrypted_file_part1 = ""
+        self.file_part1_sum = ""
+        self.crypted_file_part1 = ""
+        self.full_format_file_part1 = ""
+
+        self.unrecrypted_file_part2 = ""
+        self.file_part2_sum = ""
+        self.crypted_file_part2 = ""
+        self.full_format_file_part2 = ""
+
     def ask_file(self):
         root = tkinter.Tk()
         root.withdraw()
@@ -101,6 +120,7 @@ class File:  # modify
             self.file_name = ",".join(full_file_name.rsplit(".", 1)[:1])
             self.file_extension = ",".join(full_file_name.rsplit(".", 1)[1:])
             self.length_byte_file = len(self.uncrypted_full_file)
+            self.file_sum = self.SHA512_checksum_creation(self.uncrypted_full_file)
             file_opened.close()
 
     def get_file_information(self, *file):
@@ -146,8 +166,8 @@ class File:  # modify
 
     def split_file(self, data):  # Take 1 file and split into 2 files
         if data == 0:
-            self.unrecrypted_file_part1 = self.uncrypted_full_file[:int(self.length_byte_file/2)]
-            self.unrecrypted_file_part2 = self.uncrypted_full_file[int(self.length_byte_file/2):]
+            self.unrecrypted_file_part1 = self.crypted_full_file[:int(len(self.crypted_full_file/2))]
+            self.unrecrypted_file_part2 = self.crypted_full_file[int(len(self.crypted_full_file/2)):]
         else:
             splitted_data1 = str(data[:int(data/2)])
             splitted_data2 = str(data[int(data/2):])
@@ -162,10 +182,13 @@ class File:  # modify
     def SHA512_checksum_creation(self, file):
         return hashlib.sha512(file).hexdigest()
 
-    def format_file(self):  # Arrange the each file in order to know what information is what
-        self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1) + self.delimiter2 + str(self.file_part1_sum) + self.delimiter1 + self.file_extension + self.delimiter1 + str(self.file_sum) + self.delimiter1 + self.file_name + self.delimiter1 + self.unrecrypted_file_part1
-        self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2) + self.delimiter2 + str(self.file_part2_sum) + self.delimiter1 + self.file_extension + self.delimiter1 + str(self.file_sum) + self.delimiter1 + self.file_name + self.delimiter1 + self.unrecrypted_file_part2
-        return self.full_format_file_part1.encode(), self.full_format_file_part2.encode()
+    def format_file(self, which_format):  # Arrange the each file in order to know what information is what
+        if which_format == 0:
+            self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1) + self.delimiter1 + self.file_extension + self.delimiter1 + self.file_name + self.delimiter1 + self.unrecrypted_file_part1
+            self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2) + self.delimiter1 + self.file_extension + self.delimiter1 + self.file_name + self.delimiter1 + self.unrecrypted_file_part2
+        elif which_format == 1:
+            self.full_format_file_part1 = self.file_part1_sum + self.delimiter2 + self.full_format_file_part1
+            self.full_format_file_part2 = self.file_part2_sum + self.delimiter2 + self.full_format_file_part2
 
     def part_format_generator(self, size, part_number):  # It create random string that'll to know what is each part
         if part_number == 1:
@@ -225,12 +248,13 @@ class Key:
         return self.big_key_original, self.big_nonce_original
 
     def key_nonce_length_check(self):
-        if len(self.big_nonce_modified) <= 128:
-            self.key_choice()
-            self.big_nonce_modified = self.big_nonce_original
-        elif len(self.big_key_modified) <= 64:
+        if len(self.big_key_modified) <= 64:
             self.big_key_nonce_generator()
             print("NEED RENVOI KEY")  # handle key sending
+        elif len(self.big_nonce_modified) <= 128:
+            self.key_choice()
+            self.big_nonce_modified = self.big_nonce_original
+
 
     def nonce_choice(self):
         if self.n_choice == 0:

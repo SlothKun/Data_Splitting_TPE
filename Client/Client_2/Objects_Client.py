@@ -64,12 +64,10 @@ class File:  # modify
         self.delimiter1 = "$\-$"
         self.delimiter2 = "#&_#"
 
-        self.unrecrypted_file_part1 = ""
         self.file_part1_sum = ""
         self.crypted_file_part1 = ""
         self.full_format_file_part1 = ""
 
-        self.unrecrypted_file_part2 = ""
         self.file_part2_sum = ""
         self.crypted_file_part2 = ""
         self.full_format_file_part2 = ""
@@ -138,7 +136,6 @@ class File:  # modify
             elif mode == 1:
                 splitted_file = file.split(self.delimiter2)
                 return splitted_file[0], splitted_file[1]
-
 
     def split_file(self, data):
         if data == 0:
@@ -214,7 +211,8 @@ class Key:
         self.nonce = ""
         self.n_choice = 0
         self.k_choice = 0
-        self.delimiter = "([-_])"
+        self.delimiter1 = "([-_])"
+        self.delimiter2 = ")-_-_("
 
     def big_key_nonce_generator(self):
         self.big_key_original = rstr.rstr('azertyuiopmlkjhgfdsqwxcvbnAZERTYUIOPMLKJHGFDSQWXCVBN0123456789', 64000)
@@ -224,10 +222,9 @@ class Key:
         return self.big_key_original, self.big_nonce_original
 
     def key_nonce_length_check(self):
-        if len(self.big_key_modified) <= 64 and len(self.big_nonce_modified) <= 256:
-            self.big_key_nonce_generator()
-            print("NEED RENVOI KEY")  # handle key sending
-        elif len(self.big_nonce_modified) <= 128:
+        if len(self.big_key_modified) == 32:
+            return False
+        elif len(self.big_nonce_modified) <= 512:
             self.key_choice()
             self.big_nonce_modified = self.big_nonce_original
 
@@ -253,27 +250,24 @@ class Key:
             self.k_choice = 0
             self.key = self.big_key_modified[-64:-32]
 
-    def get_big_key_nonce(self, data, mode):
+    def get_big_key_nonce(self, mode, data):
         if mode == 0:
-            data_splitted = data.split(self.delimiter)
-            checksum = data[0]
-            self.big_key_original = data_splitted[1]
-            self.big_key_modified = self.big_key_original
-            self.big_nonce_original = data_splitted[2]
-            self.big_nonce_modified = self.big_nonce_original
-            return checksum
+            splitted_data = data.split(self.delimiter2)
+            checksum = splitted_data[0]
+            key_nonce = splitted_data[1]
+            return checksum, key_nonce
         elif mode == 1:
-            data_splitted = data.split(self.delimiter)
-            self.big_key_original = data_splitted[1]
+            data_splitted = data.split(self.delimiter1)
+            self.big_key_original = data_splitted[0]
             self.big_key_modified = self.big_key_original
-            self.big_nonce_original = data_splitted[2]
+            self.big_nonce_original = data_splitted[1]
             self.big_nonce_modified = self.big_nonce_original
 
-    def big_key_nonce_format(self, mode):
+    def big_key_nonce_format(self, mode, *datas):
         if mode == 0:
-            formatted = self.delimiter + self.big_key_original + self.delimiter + self.big_nonce_original
+            formatted = self.big_key_original + self.delimiter1 + self.big_nonce_original
         elif mode == 1:
-            formatted = self.big_key_original + self.delimiter + self.big_nonce_original
+            formatted = datas[0] + self.delimiter2 + datas[1]
         return formatted
 
 

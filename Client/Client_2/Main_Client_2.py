@@ -66,33 +66,31 @@ def key_init():
         KeyFile_Server1.big_key_nonce_generator()
         KeyFile_Server1.key_choice()
         big_key_nonce.append(KeyFile_Server1.big_key_nonce_format(0))
-        format_sum = File_Manipulation.SHA512_checksum_creation(big_key_nonce[0])
-        Server1_conn.sending(DH_Algorithm_Server1.encrypt((format_sum + KeyFile_Server1.delimiter + big_key_nonce[0])))
+        Server1_conn.sending(DH_Algorithm_Server1.encrypt(KeyFile_Server1.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(big_key_nonce[0]), big_key_nonce[0])))
     elif len(big_key_nonce) == 1:
         KeyFile_Server2.big_key_nonce_generator()
         KeyFile_Server2.key_choice()
         big_key_nonce.append(KeyFile_Server2.big_key_nonce_format(0))
-        format_sum = File_Manipulation.SHA512_checksum_creation(big_key_nonce[1])
-        Server2_conn.sending(DH_Algorithm_Server2.encrypt((format_sum + KeyFile_Server2.delimiter + big_key_nonce[1])))
+        Server2_conn.sending(DH_Algorithm_Server2.encrypt(KeyFile_Server2.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(big_key_nonce[1]), big_key_nonce[1])))
     elif len(big_key_nonce) == 2:
-        KeyFile_Mine.big_key_nonce_generator()
-        KeyFile_Mine.key_choice()
-        big_key_nonce.append(KeyFile_Mine.big_key_nonce_format(1))
-        part1, part2 = File_Manipulation.split_file(big_key_nonce[2])
-        Server1_conn.sending(DH_Algorithm_Client.encrypt((File_Manipulation.SHA512_checksum_creation(part1) + KeyFile_Mine.delimiter + part1)))
-        Server2_conn.sending(DH_Algorithm_Client.encrypt((File_Manipulation.SHA512_checksum_creation(part2) + KeyFile_Mine.delimiter + part2)))
-    elif len(big_key_nonce) == 3:
         bigpart1 = DH_Algorithm_Client.decrypt(Server1_conn.receiving())
         bigpart2 = DH_Algorithm_Client.decrypt(Server2_conn.receiving())
-        bigpart1 = bigpart1.split(KeyFile_Client.delimiter)
-        bigpart2 = bigpart2.split(KeyFile_Client.delimiter)
-        if not File_Manipulation.file_integrity_check(bigpart1[1], bigpart1[0]) or not File_Manipulation.file_integrity_check(bigpart2[1], bigpart2[0]):
+        bigpart1_sum, bigpart1 = KeyFile_Client.get_big_key_nonce(0, bigpart1)
+        bigpart2_sum, bigpart2 = KeyFile_Client.get_big_key_nonce(0, bigpart2)
+        if not File_Manipulation.file_integrity_check(bigpart1, bigpart1_sum) or not File_Manipulation.file_integrity_check(bigpart2, bigpart2_sum):
             integrity_failed_closing_protocol("Integrity fail.")
         else:
             if data_check(bigpart1[1]) == "ok" and data_check(bigpart2[1]) == "ok":
                 bigfile = (bigpart1 + bigpart2)
-                KeyFile_Client.get_big_key_nonce(bigfile, 1)
+                KeyFile_Client.get_big_key_nonce(1, bigfile)
                 big_key_nonce.append(bigfile)
+    elif len(big_key_nonce) == 3:
+        KeyFile_Mine.big_key_nonce_generator()
+        KeyFile_Mine.key_choice()
+        big_key_nonce.append(KeyFile_Mine.big_key_nonce_format(1))
+        part1, part2 = File_Manipulation.split_file(big_key_nonce[3])
+        Server1_conn.sending(DH_Algorithm_Client.encrypt(KeyFile_Mine.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(part1), part1)))
+        Server2_conn.sending(DH_Algorithm_Client.encrypt(KeyFile_Mine.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(part2), part2)))
     elif len(big_key_nonce) == 4:
         big_key_nonce.clear()
         key_initialised = False
@@ -147,8 +145,6 @@ def receiving_file():
 def data_check(data):
     if data == "ping":
         ping_or_pong("pong")
-    elif data == "received":
-        pass
     elif data == "Integrity fail.":
         total_disconnection()
     elif data == "Extension match failed.":
@@ -189,10 +185,8 @@ def keyfile_reload(mode):
         # Reset File_manipulation init
         File_Manipulation.reset_init()
         # Verify length of nonce and key and take one nonce for each objects
-        KeyFile_Mine.key_nonce_length_check()
-        KeyFile_Client.key_nonce_length_check()
-        KeyFile_Server1.key_nonce_length_check()
-        KeyFile_Server2.key_nonce_length_check()
+        if not KeyFile_Mine.key_nonce_length_check() or not KeyFile_Client.key_nonce_length_check() or not KeyFile_Server1.key_nonce_length_check() or not KeyFile_Server2.key_nonce_length_check():
+            key_initialised = False
         KeyFile_Mine.nonce_choice()
         KeyFile_Client.nonce_choice()
         KeyFile_Server1.nonce_choice()

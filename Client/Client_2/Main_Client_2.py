@@ -1,7 +1,7 @@
 import Objects_Client
 
 # Create Conn Objects
-Server1_conn = Objects_Client.Client('127.0.0.1', 80)
+Server1_conn = Objects_Client.Client('127.0.0.1', 6801)
 Server2_conn = Objects_Client.Client('127.0.0.1', 6799)
 
 # Create DH_algo Objects
@@ -20,11 +20,14 @@ AES_Encryption = Objects_Client.AES_Algorithm()
 File_Manipulation = Objects_Client.File()
 
 # Create some variable
+global danger
+global key_initialised
+
 danger = False
 my_turn = False
 s1_connected = False
 s2_connected = False
-dh_initialised = True
+dh_initialised = False
 key_initialised = False
 dh_pubkey = []
 big_key_nonce = []
@@ -33,10 +36,10 @@ big_key_nonce = []
 def conn_s(server):
     if server == 1:
         Server1_conn.client_activation()
-        print("Server 1 connected")
+        return True
     elif server == 2:
         Server2_conn.client_activation()
-        print("Server 2 connected")
+        return True
 
 def dh_init():
     dh_pbkey_s1 = DH_Algorithm_Server1.public_key_generator()
@@ -58,8 +61,7 @@ def dh_init():
         DH_Algorithm_Server2.private_key_generator(dh_pubkey[1])
         DH_Algorithm_Client.private_key_generator(dh_pubkey[2])
         dh_pubkey.clear()
-        dh_initialised = False
-        key_initialised = True
+        return False, True
 
 def key_init():
     if len(big_key_nonce) == 0:
@@ -93,7 +95,7 @@ def key_init():
         Server2_conn.sending(DH_Algorithm_Client.encrypt(KeyFile_Mine.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(part2), part2)))
     elif len(big_key_nonce) == 4:
         big_key_nonce.clear()
-        key_initialised = False
+        return False
 
 def sending_file():
     keyfile_reload(0)
@@ -112,7 +114,7 @@ def sending_file():
     Server1_conn.sending(AES_Encryption.encrypt())
     AES_Encryption.update_data(File_Manipulation.full_format_file_part2, KeyFile_Server2.key, KeyFile_Server2.nonce)
     Server2_conn.sending(AES_Encryption.encrypt())
-    my_turn = False
+    return False
 
 def receiving_file():
     keyfile_reload(0)
@@ -139,17 +141,13 @@ def receiving_file():
             if not File_Manipulation.file_integrity_check(File_Manipulation.uncrypted_full_file, File_Manipulation.file_sum):
                 integrity_failed_closing_protocol("Integrity fail.")
             else:
-                my_turn = True
+                return True
                 # open file
 
 def data_check(data):
     if data == "ping":
         ping_or_pong("pong")
     elif data == "Integrity fail.":
-        total_disconnection()
-    elif data == "Extension match failed.":
-        total_disconnection()
-    elif data == "Name match failed.":
         total_disconnection()
     else:
         return "ok"
@@ -172,7 +170,7 @@ def ping_check():
     decrypted_data1 = AES_Encryption.decrypt().split(File_Manipulation.delimiter2)
     AES_Encryption.update_data(received_data2, KeyFile_Server2.key, KeyFile_Server2.nonce)
     decrypted_data2 = AES_Encryption.decrypt().split(File_Manipulation.delimiter2)
-    if not File_Manipulation.file_integrity_check(decrypted_data1[1], decrypted_data1.split[0]) or not File_Manipulation.file_integrity_check(decrypted_data2[1], decrypted_data2[0]):
+    if not File_Manipulation.file_integrity_check(decrypted_data1[1], decrypted_data1[0]) or not File_Manipulation.file_integrity_check(decrypted_data2[1], decrypted_data2[0]):
         integrity_failed_closing_protocol("Integrity fail.")
     else:
         if decrypted_data1[1] == "Integrity fail." or decrypted_data2[1] == "Integrity fail.":
@@ -181,6 +179,7 @@ def ping_check():
             integrity_failed_closing_protocol("Ping check failed.")
 
 def keyfile_reload(mode):
+    global key_initialised
     if mode == 0:
         # Reset File_manipulation init
         File_Manipulation.reset_init()
@@ -192,10 +191,9 @@ def keyfile_reload(mode):
         KeyFile_Server1.nonce_choice()
         KeyFile_Server2.nonce_choice()
     elif mode == 1:
-        KeyFile_Server1.key_nonce_length_check()
-        KeyFile_Server2.key_nonce_length_check()
-        KeyFile_Server1.nonce_choice()
-        KeyFile_Server2.nonce_choice()
+        if not KeyFile_Server1.key_nonce_length_check() or not KeyFile_Server2.key_nonce_length_check():
+            KeyFile_Server1.nonce_choice()
+            KeyFile_Server2.nonce_choice()
 
 def integrity_failed_closing_protocol(error):
     keyfile_reload(1)
@@ -207,22 +205,25 @@ def integrity_failed_closing_protocol(error):
     print("contacting an administrator..")
 
 def total_disconnection():
+    global danger
     Server1_conn.disconnecting()
     Server2_conn.disconnecting()
     danger = True
 
 while not danger:
     if not s1_connected:
-        conn_s(1)
-    elif not s2_connected:
-        conn_s(2)
+        s1_connected = conn_s(1)
+        print(s1_connected)
+    elif not s2_connected and s1_connected == True:
+        s2_connected = conn_s(2)
+        print(s2_connected)
     else:
         if not dh_initialised:  # Initialise DH_algo key creation / send
-            dh_init()
+            dh_initialised, key_initialised = dh_init()
         elif not key_initialised:  # Initialise Key creation / send
-            key_init()
+            key_initialised = key_init()
         else:
             if my_turn:
-                sending_file()
+                my_turn = sending_file()
             else:
-                receiving_file()
+                my_turn = receiving_file()

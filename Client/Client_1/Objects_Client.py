@@ -32,6 +32,7 @@ class Client:
             sock.connect((self.serverhost, self.port_listening))
             self.socket = sock
         except (ConnectionRefusedError, OSError):
+            print("error")
             self.establishing_conn(sock)
 
     def disconnecting(self):
@@ -51,7 +52,7 @@ class Client:
                 return self.message_content.decode()
 
     def sending(self, data):
-        self.socket.sendall(data.encode())
+        self.socket.sendall(str(data).encode())
 
 
 class File:  # modify
@@ -130,9 +131,9 @@ class File:  # modify
                             i += 1
                     else:
                         if i == 0:
-                            return "Extension match failed."
+                            return False
                         elif i == 1:
-                            return "Name match failed."
+                            return False
             elif mode == 1:
                 splitted_file = file.split(self.delimiter2)
                 return splitted_file[0], splitted_file[1]
@@ -153,7 +154,7 @@ class File:  # modify
         f.close()
 
     def SHA512_checksum_creation(self, file):
-        return hashlib.sha512(file).hexdigest()
+        return hashlib.sha512(file.encode()).hexdigest()
 
     def format_file(self, which_format):
         if which_format == 0:

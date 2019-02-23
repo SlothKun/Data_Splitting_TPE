@@ -3,12 +3,12 @@ import select
 import string
 import random
 import re
-import pathlib
 import os
+import pathlib
 import hashlib
+import rstr
 import tkinter
 import tkinter.filedialog
-import rstr
 import pyDH
 from Crypto.Cipher import AES
 from Crypto import Random
@@ -16,7 +16,7 @@ from Crypto import Random
 class Server:
     def __init__(self):
         self.host = '127.0.0.1'
-        self.port_listening = 6800
+        self.port_listening = 6801
         self.whitelisted_client = ["172.16.1.42", "127.0.0.1", "192.168.0.33", "192.168.0.34", "172.16.1.19"]
         self.socket = ""
         self.message_content = b""
@@ -25,71 +25,63 @@ class Server:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((self.host, self.port_listening))
-        s.listen(2)
+        s.listen()
         self.establishing_conn(s)
 
     def establishing_conn(self, sock):
-        clientconnect, clientinfo = sock.accept()
-        self.socket = sock
-        ip, port = clientconnect.getpeername()
-        if ip in self.whitelisted_client:  # Whitelist application
-            self.connected_client.append(clientconnect)
-            print(ip, " is connected on port ", port)
-        else:
-            print("This client isn't whitelisted")
-            print("Closing connection..")
-            sock.close()
+        try:
+            clientconnect, clientinfo = sock.accept()
+            self.socket = sock
+            ip, port = clientconnect.getpeername()
+            if ip in self.whitelisted_client:  # Whitelist application
+                print(ip, " is connected on port : ", port)
+            else:
+                print("This client isn't whitelisted")
+                print("Closing connection..")
+                sock.close()
+                self.server_activation()
+        except (ConnectionRefusedError, OSError):
+            self.server_activation()
+
+    def disconnecting(self):
+        self.socket.close()
 
     def receiving(self):
         try:
-            client_to_read, wlist, xlist = select.select(self.connected_client, [], [], 0.05)
+            client_to_read, wlist, xlist = select.select([self.socket], [], [], 0.05)
         except select.error:  # avoid error if there's no one to read
             pass
         else:
-            message_content = self.socket.recv(16777216)
-            self.answer()
+            self.message_content = b""
+            self.message_content = self.socket.recv(16777216)
+            if self.message_content.decode() == "":
+                self.receiving()
+            else:
+                return self.message_content.decode()
 
-    def answer(self):
-        if self.message_content.decode() == "ping":
-            self.socket.sendall(b"pong")
-        elif self.message_content.decode() == "received":
-            pass
-        else:
-            self.socket.sendall(b"received")
-            return self.message_content.decode()
+    def sending(self, data):
+        self.socket.sendall(str(data).encode())
 
-    def sending(self, *datas):
-        file = ""
-        for data in datas:
-            file += str(data)
-        self.socket.sendall(file.encode())
-
-    def ping(self):  # send ping to verify if server is ok
-        self.socket.sendall(b"ping")
-        self.ping_check()
-
-    def ping_check(self):  # verify if server answer to the ping, if not, he closes conn
-        msg_received = self.socket.recv(2048)
-        if msg_received.decode() != "pong":
-            print("The client ", self.socket, " didn't answer to the ping correctly. disconnection to the client..")
-            self.socket.sendall(b"Wrong!")
-            self.socket.close()
 
 class File:
     def __init__(self):
-        self.decrypted_data = ""
-        self.file_sum = ""
-        self.delimiter = b"#&_#"
+        self.delimiter = "#&_#"
 
     def get_file_information(self, file):
-        self.decrypted_data = file.decode()
-        self.file_sum = file.split(self.delimiter)[1]
+        cuted_file = file.split(self.delimiter)
+        return cuted_file[0], cuted_file[1]
 
-    def file_integrity_check(self):  # Simply compare the actual file sum with given sum
-        if hashlib.sha512(self.received_data).hexdigest() == self.file_sum:
-            print("integrity check")
+    def format_file(self, data, sum):
+        return sum + self.delimiter + data
+
+    def SHA512_checksum_creation(self, file):
+        return hashlib.sha512(file).hexdigest()
+
+    def file_integrity_check(self, data, sum):
+        if hashlib.sha512(data).hexdigest() == sum:
+            return True
         else:
-            print("INTEGRITY FAILED ! ABORT ! ABORT !")
+            return False
 
 
 class DH_algorithm:
@@ -106,14 +98,14 @@ class DH_algorithm:
     def private_key_generator(self, friendkey):
         self.private_key = self.engine.gen_shared_key(int(friendkey))
 
-    def encrypt(self, key_to_encrypt):
+    def encrypt(self, data):
         cipher = AES.new(self.private_key.encode(), AES.MODE_OCB)
-        crypted_key, tag = cipher.encrypt_and_digest(key_to_encrypt)
-        return crypted_key, tag
+        crypted_key, tag = cipher.encrypt_and_digest(data)
+        return crypted_key
 
-    def decrypt(self, crypted_key, tag):
+    def decrypt(self, data):
         cipher = AES.new(self.private_key.encode(), AES.MODE_OCB)
-        uncrypted_key = cipher.decrypt_and_verify(crypted_key, tag)
+        uncrypted_key = cipher.decrypt(data)
         return uncrypted_key
 
 
@@ -127,23 +119,17 @@ class Key:
         self.nonce = ""
         self.n_choice = 0
         self.k_choice = 0
-        self.delimiter = b"([-_])"
-
-    def big_key_nonce_generator(self):  # Create a big key and a big nonce
-        self.big_key_original = rstr.rstr('azertyuiopmlkjhgfdsqwxcvbnAZERTYUIOPMLKJHGFDSQWXCVBN0123456789', 64000)
-        self.big_key_modified = self.big_key_original
-        self.big_nonce_original = rstr.rstr('azertyuiopmlkjhgfdsqwxcvbnAZERTYUIOPMLKJHGFDSQWXCVBN0123456789', 64000)
-        self.big_nonce_modified = self.big_nonce_original
-        return self.big_key_original, self.big_nonce_original
+        self.delimiter1 = "([-_])"
+        self.delimiter2 = ")-_-_("
 
     def key_nonce_length_check(self):
-        if len(self.big_nonce_modified) <= 128:
+        if len(self.big_key_modified) == 32:
+            return False
+        elif len(self.big_nonce_modified) <= 512:
             self.key_choice()
             self.big_nonce_modified = self.big_nonce_original
-        elif len(self.big_key_modified) <= 64:
-            self.big_key_nonce_generator()
-            print("NEED RENVOI KEY")
 
+     # /!\ MODIFIER LE NONCE ET LE KEY CHOICE /!\
     def nonce_choice(self):
         if self.n_choice == 0:
             self.n_choice = 1
@@ -165,18 +151,20 @@ class Key:
         elif self.k_choice == 2:
             self.k_choice = 0
             self.key = self.big_key_modified[-64:-32]
+    # /!\ MODIFIER LE NONCE ET LE KEY CHOICE /!\
 
-    def big_key_nonce_format(self):
-        formatted = self.big_key_original + self.delimiter + self.big_nonce_original
-        return formatted
-
-    def get_big_key_nonce(self, data):
-        if re.findall("[a-g]*[A-G]*1*5*", data.split(self.delimiter)[0]).decode() != False:
-            self.big_key_original = data.split(self.delimiter)[1].decode()
-            self.big_nonce_original = data.split(self.delimiter)[2].decode()
-        elif re.findall("[o-u]*[O-U]*3*7*",data.split(self.delimiter[0])).decode() != False:
-            reformatted_data = data.split(self.delimiter)[1].decode() + self.delimiter + data.split(self.delimiter)[2].decode()
-            return reformatted_data.encode()
+    def get_big_key_nonce(self, mode, data):
+        if mode == 0:
+            splitted_data = data.split(self.delimiter2)
+            checksum = splitted_data[0]
+            key_nonce = splitted_data[1]
+            return checksum, key_nonce
+        elif mode == 1:
+            data_splitted = data.split(self.delimiter1)
+            self.big_key_original = data_splitted[0]
+            self.big_key_modified = self.big_key_original
+            self.big_nonce_original = data_splitted[1]
+            self.big_nonce_modified = self.big_nonce_original
 
 
 class AES_Algorithm:
@@ -184,20 +172,18 @@ class AES_Algorithm:
         self.data = ""
         self.key = ""
         self.nonce = ""
-        self.tag = ""
 
-    def update_data(self, data, key, nonce, tag):
+    def update_data(self, data, key, nonce):
         self.data = data
         self.key = key
         self.nonce = nonce
-        self.tag = tag
 
     def encrypt(self):
         cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
         crypted_data, tag = cipher.encrypt_and_digest(self.data)
-        return crypted_data, tag
+        return crypted_data
 
     def decrypt(self):
         cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
-        uncrypted_data = cipher.decrypt_and_verify(self.crypted_full_file, self.tag)
+        uncrypted_data = cipher.decrypt(self.data)
         return uncrypted_data

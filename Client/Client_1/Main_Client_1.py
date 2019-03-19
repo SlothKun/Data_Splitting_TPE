@@ -1,8 +1,8 @@
 import Objects_Client
-
+import asyncio
 # Create Conn Objects
-Server1_conn = Objects_Client.Client('127.0.0.1', 6801)
-Server2_conn = Objects_Client.Client('127.0.0.1', 6800)
+Server1_conn = Objects_Client.Client('127.0.0.1', 6800)
+Server2_conn = Objects_Client.Client('127.0.0.1', 6802)
 
 # Create DH_algo Objects
 DH_Algorithm_Server1 = Objects_Client.DH_algorithm()
@@ -215,13 +215,11 @@ def total_disconnection():
     Server2_conn.disconnecting()
     danger = True
 
-
 while not danger:
     if not s1_connected:
         s1_connected = conn_s(1)
     elif not s2_connected and s1_connected == True:
         s2_connected = conn_s(2)
-        print(s2_connected)
     else:
         if not dh_initialised:  # Initialise DH_algo key creation / send
             dh_initialised, key_initialised = dh_init()

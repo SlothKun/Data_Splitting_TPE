@@ -42,26 +42,28 @@ def conn_s(server):
         return True
 
 def dh_init():
+    dh_pubkey = []
     dh_pbkey_s1 = DH_Algorithm_Server1.public_key_generator()
     dh_pbkey_s2 = DH_Algorithm_Server2.public_key_generator()
     dh_pbkey_c = DH_Algorithm_Client.public_key_generator()
-    if len(dh_pubkey) == 0:
-        Server1_conn.sending(dh_pbkey_s1)
-        dh_pubkey.append(Server1_conn.receiving())
-    elif len(dh_pubkey) == 1:
-        Server2_conn.sending(dh_pbkey_s2)
-        dh_pubkey.append(Server2_conn.receiving())
-    elif len(dh_pubkey) == 2:
-        part1, part2 = File_Manipulation.split_file(dh_pbkey_c)
-        Server1_conn.sending(part1)
-        Server2_conn.sending(part2)
-        dh_pubkey.append((Server1_conn.receiving() + Server2_conn.receiving()))
-    elif len(dh_pubkey) == 3:
-        DH_Algorithm_Server1.private_key_generator(dh_pubkey[0])
-        DH_Algorithm_Server2.private_key_generator(dh_pubkey[1])
-        DH_Algorithm_Client.private_key_generator(dh_pubkey[2])
-        dh_pubkey.clear()
-        return False, True
+    while True:
+        if len(dh_pubkey) == 0:
+            Server1_conn.sending(dh_pbkey_s1)
+            dh_pubkey.append(Server1_conn.receiving())
+        elif len(dh_pubkey) == 1:
+            Server2_conn.sending(dh_pbkey_s2)
+            dh_pubkey.append(Server2_conn.receiving())
+        elif len(dh_pubkey) == 2:
+            part1, part2 = File_Manipulation.split_file(dh_pbkey_c)
+            Server1_conn.sending(part1)
+            Server2_conn.sending(part2)
+            dh_pubkey.append((Server1_conn.receiving() + Server2_conn.receiving()))
+        elif len(dh_pubkey) == 3:
+            DH_Algorithm_Server1.private_key_generator(dh_pubkey[0])
+            DH_Algorithm_Server2.private_key_generator(dh_pubkey[1])
+            DH_Algorithm_Client.private_key_generator(dh_pubkey[2])
+            dh_pubkey.clear()
+            return True, False
 
 
 def key_init():
@@ -78,7 +80,7 @@ def key_init():
     elif len(big_key_nonce) == 2:
         KeyFile_Mine.big_key_nonce_generator()
         KeyFile_Mine.key_choice()
-        big_key_nonce.append(KeyFile_Mine.big_key_nonce_format(1))
+        big_key_nonce.append(KeyFile_Mine.big_key_nonce_format(0))
         part1, part2 = File_Manipulation.split_file(big_key_nonce[2])
         Server1_conn.sending(DH_Algorithm_Client.encrypt(KeyFile_Mine.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(part1), part1)))
         Server2_conn.sending(DH_Algorithm_Client.encrypt(KeyFile_Mine.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(part2), part2)))
@@ -218,7 +220,7 @@ def total_disconnection():
 while not danger:
     if not s1_connected:
         s1_connected = conn_s(1)
-    elif not s2_connected and s1_connected == True:
+    elif not s2_connected:
         s2_connected = conn_s(2)
     else:
         if not dh_initialised:  # Initialise DH_algo key creation / send

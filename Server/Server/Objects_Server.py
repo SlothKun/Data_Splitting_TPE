@@ -14,9 +14,9 @@ from Crypto.Cipher import AES
 from Crypto import Random
 
 class Server:
-    def __init__(self):
-        self.host = '127.0.0.1'
-        self.port_listening = 6801
+    def __init__(self, host, port_listening):
+        self.host = host
+        self.port_listening = port_listening
         self.whitelisted_client = ["172.16.1.42", "127.0.0.1", "192.168.0.33", "192.168.0.34", "172.16.1.19"]
         self.socket = ""
         self.message_content = b""
@@ -31,7 +31,7 @@ class Server:
     def establishing_conn(self, sock):
         try:
             clientconnect, clientinfo = sock.accept()
-            self.socket = sock
+            self.socket = clientconnect
             ip, port = clientconnect.getpeername()
             if ip in self.whitelisted_client:  # Whitelist application
                 print(ip, " is connected on port : ", port)

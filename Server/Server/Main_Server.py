@@ -1,8 +1,8 @@
 import Objects_Server
 
 # Create Conn Objects
-Client1_conn = Objects_Server.Server()
-Client2_conn = Objects_Server.Server()
+Client1_conn = Objects_Server.Server("127.0.0.1", 6800)
+Client2_conn = Objects_Server.Server("127.0.0.1", 6801)
 
 # Create DH_algo Objects
 DH_Algorithm_Client1 = Objects_Server.DH_algorithm()
@@ -29,6 +29,7 @@ key_initialised = False
 
 
 # Create function to clear the code
+
 def conn_s(client):
     if client == 1:
         Client1_conn.server_activation()
@@ -176,10 +177,9 @@ def total_disconnection():
 while not danger:
     if not c1_connected:
         c1_connected = conn_s(1)
-        print("ok")
     elif not c2_connected:
         c2_connected = conn_s(2)
-        print("ok")
+
     else:
         if not dh_initialised:  # Initialise DH_algo key creation / send
             dh_initialised, key_initialised = dh_init()

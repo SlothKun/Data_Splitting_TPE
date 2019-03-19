@@ -41,22 +41,24 @@ def dh_init():
     dh_pubkey = []
     dh_pbkey_c1 = DH_Algorithm_Client1.public_key_generator()
     dh_pbkey_c2 = DH_Algorithm_Client2.public_key_generator()
-    if len(dh_pubkey) == 0:
-        dh_pubkey.append(Client1_conn.receiving())
-        Client1_conn.sending(dh_pbkey_c1)
-    elif len(dh_pubkey) == 1:
-        dh_pubkey.append(Client2_conn.receiving())
-        Client2_conn.sending(dh_pbkey_c2)
-    elif len(dh_pubkey) == 2:
-        dh_part_key_C1 = Client1_conn.receiving()
-        dh_part_key_C2 = Client2_conn.receiving()
-        Client1_conn.sending(dh_part_key_C2)
-        Client2_conn.sending(dh_part_key_C1)
-        dh_pubkey.append((dh_part_key_C1 + dh_part_key_C2))
-    elif len(dh_pubkey) == 3:
-        DH_Algorithm_Client1.private_key_generator(dh_pubkey[0])
-        DH_Algorithm_Client2.private_key_generator(dh_pubkey[1])
-        return False, True
+    while True:
+        if len(dh_pubkey) == 0:
+            dh_pubkey.append(Client1_conn.receiving())
+            Client1_conn.sending(dh_pbkey_c1)
+        elif len(dh_pubkey) == 1:
+            dh_pubkey.append(Client2_conn.receiving())
+            Client2_conn.sending(dh_pbkey_c2)
+        elif len(dh_pubkey) == 2:
+            dh_part_key_C1 = Client1_conn.receiving()
+            dh_part_key_C2 = Client2_conn.receiving()
+            Client1_conn.sending(dh_part_key_C2)
+            Client2_conn.sending(dh_part_key_C1)
+            dh_pubkey.append((dh_part_key_C1 + dh_part_key_C2))
+        elif len(dh_pubkey) == 3:
+            DH_Algorithm_Client1.private_key_generator(dh_pubkey[0])
+            DH_Algorithm_Client2.private_key_generator(dh_pubkey[1])
+            return True, False
+
 
 def key_init():
     big_key_nonce = []
@@ -172,7 +174,6 @@ def total_disconnection():
     danger = True
 
 while not danger:
-
     if not c1_connected:
         c1_connected = conn_s(1)
     elif not c2_connected:

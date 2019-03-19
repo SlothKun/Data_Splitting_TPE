@@ -47,17 +47,21 @@ class Server:
         self.socket.close()
 
     def receiving(self):
-        try:
-            client_to_read, wlist, xlist = select.select([self.socket], [], [], 0.05)
-        except select.error:  # avoid error if there's no one to read
-            pass
-        else:
-            self.message_content = b""
-            self.message_content = self.socket.recv(16777216)
-            if self.message_content.decode() == "":
-                self.receiving()
-            else:
-                return self.message_content.decode()
+        while True:
+            try:
+                client_to_read, wlist, xlist = select.select([self.socket], [], [], 0.05)
+            except select.error:  # avoid error if there's no one to read
+                pass
+            finally:
+                try:
+                    if len(client_to_read) != 0:
+                        for client in client_to_read:
+                            self.message_content = b""
+                            self.message_content = client.recv(16777216)
+                            if self.message_content.decode() != "" or self.message_content.decode() != None:
+                                return self.message_content.decode()
+                except (ConnectionAbortedError, ConnectionResetError):
+                    self.client_activation()
 
     def sending(self, data):
         self.socket.sendall(str(data).encode())
@@ -96,16 +100,16 @@ class DH_algorithm:
         return self.public_key
 
     def private_key_generator(self, friendkey):
-        self.private_key = self.engine.gen_shared_key(int(friendkey))
+        self.private_key = self.engine.gen_shared_key(int(friendkey.encode()))
 
     def encrypt(self, data):
-        cipher = AES.new(self.private_key.encode(), AES.MODE_OCB)
-        crypted_key, tag = cipher.encrypt_and_digest(data)
+        cipher = AES.new(self.private_key.encode(), AES.MODE_SIV)
+        crypted_key, tag = cipher.encrypt_and_digest(data.encode())
         return crypted_key
 
     def decrypt(self, data):
-        cipher = AES.new(self.private_key.encode(), AES.MODE_OCB)
-        uncrypted_key = cipher.decrypt(data)
+        cipher = AES.new(self.private_key.encode(), AES.MODE_SIV)
+        uncrypted_key = cipher.decrypt_and_verify(data.encode())
         return uncrypted_key
 
 

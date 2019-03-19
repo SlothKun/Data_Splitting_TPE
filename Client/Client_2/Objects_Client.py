@@ -44,12 +44,19 @@ class Client:
         except select.error:  # avoid error if there's no one to read
             pass
         else:
-            self.message_content = b""
-            self.message_content = self.socket.recv(16777216)
-            if self.message_content.decode() == "":
-                self.receiving()
-            else:
-                return self.message_content.decode()
+            try:
+                if len(client_to_read) == 0:
+                    self.receiving()
+                else:
+                    for client in client_to_read:
+                        self.message_content = b""
+                        self.message_content = client.recv(16777216)
+                        if self.message_content.decode() == "" or self.message_content.decode() == None:
+                            self.receiving()
+                        else:
+                            return self.message_content.decode()
+            except (ConnectionAbortedError, ConnectionResetError):
+                self.establishing_conn(self.socket)
 
     def sending(self, data):
         self.socket.sendall(str(data).encode())

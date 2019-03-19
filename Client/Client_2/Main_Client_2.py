@@ -2,7 +2,7 @@ import Objects_Client
 
 # Create Conn Objects
 Server1_conn = Objects_Client.Client('127.0.0.1', 6801)
-Server2_conn = Objects_Client.Client('127.0.0.1', 6799)
+Server2_conn = Objects_Client.Client('127.0.0.1', 6803)
 
 # Create DH_algo Objects
 DH_Algorithm_Server1 = Objects_Client.DH_algorithm()

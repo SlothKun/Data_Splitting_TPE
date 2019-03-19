@@ -39,24 +39,21 @@ class Client:
         self.socket.close()
 
     def receiving(self):
-        try:
-            client_to_read, wlist, xlist = select.select([self.socket], [], [], 0.05)
-        except select.error:  # avoid error if there's no one to read
-            pass
-        else:
+        while True:
             try:
-                if len(client_to_read) == 0:
-                    self.receiving()
-                else:
-                    for client in client_to_read:
-                        self.message_content = b""
-                        self.message_content = client.recv(16777216)
-                        if self.message_content.decode() == "" or self.message_content.decode() == None:
-                            self.receiving()
-                        else:
-                            return self.message_content.decode()
-            except (ConnectionAbortedError, ConnectionResetError):
-                self.establishing_conn(self.socket)
+                client_to_read, wlist, xlist = select.select([self.socket], [], [], 0.05)
+            except select.error:  # avoid error if there's no one to read
+                pass
+            finally:
+                try:
+                    if len(client_to_read) != 0:
+                        for client in client_to_read:
+                            self.message_content = b""
+                            self.message_content = client.recv(16777216)
+                            if self.message_content.decode() != "" or self.message_content.decode() != None:
+                                return self.message_content.decode()
+                except (ConnectionAbortedError, ConnectionResetError):
+                    self.client_activation()
 
     def sending(self, data):
         self.socket.sendall(str(data).encode())
@@ -150,8 +147,8 @@ class File:  # modify
             self.unrecrypted_file_part1 = self.crypted_full_file[:int(len(self.crypted_full_file/2))]
             self.unrecrypted_file_part2 = self.crypted_full_file[int(len(self.crypted_full_file/2)):]
         else:
-            splitted_data1 = str(data[:int(data/2)])
-            splitted_data2 = str(data[int(data/2):])
+            splitted_data1 = str(data)[:int(len(str(data)) /2)]
+            splitted_data2 = str(data)[int(len(str(data)) /2):]
             return splitted_data1, splitted_data2
 
     def reassemble_file(self):
@@ -196,16 +193,16 @@ class DH_algorithm:
         return self.public_key
 
     def private_key_generator(self, friendkey):
-        self.private_key = self.engine.gen_shared_key(int(friendkey))
+        self.private_key = self.engine.gen_shared_key(int(friendkey.encode()))
 
     def encrypt(self, data):
-        cipher = AES.new(self.private_key.encode(), AES.MODE_OCB)
-        crypted_key, tag = cipher.encrypt_and_digest(data)
+        cipher = AES.new(self.private_key.encode(), AES.MODE_SIV)
+        crypted_key, tag = cipher.encrypt_and_digest(data.encode())
         return crypted_key
 
     def decrypt(self, data):
-        cipher = AES.new(self.private_key.encode(), AES.MODE_OCB)
-        uncrypted_key = cipher.decrypt(data)
+        cipher = AES.new(self.private_key.encode(), AES.MODE_SIV)
+        uncrypted_key = cipher.decrypt_and_verify(data.encode())
         return uncrypted_key
 
 

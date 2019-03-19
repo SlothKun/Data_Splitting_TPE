@@ -22,6 +22,7 @@ File_Manipulation = Objects_Client.File()
 # Create some variable
 global danger
 global key_initialised
+global dh_pubkey
 
 danger = False
 my_turn = False
@@ -29,7 +30,7 @@ s1_connected = False
 s2_connected = False
 dh_initialised = False
 key_initialised = False
-dh_pubkey = []
+
 big_key_nonce = []
 
 # Create function to clear the code
@@ -42,26 +43,28 @@ def conn_s(server):
         return True
 
 def dh_init():
+    dh_pubkey = []
     dh_pbkey_s1 = DH_Algorithm_Server1.public_key_generator()
     dh_pbkey_s2 = DH_Algorithm_Server2.public_key_generator()
     dh_pbkey_c = DH_Algorithm_Client.public_key_generator()
-    if len(dh_pubkey) == 0:
-        Server1_conn.sending(dh_pbkey_s1)
-        dh_pubkey.append(Server1_conn.receiving())
-    elif len(dh_pubkey) == 1:
-        Server2_conn.sending(dh_pbkey_s2)
-        dh_pubkey.append(Server2_conn.receiving())
-    elif len(dh_pubkey) == 2:
-        part1, part2 = File_Manipulation.split_file(dh_pbkey_c)
-        Server1_conn.sending(part1)
-        Server2_conn.sending(part2)
-        dh_pubkey.append((Server1_conn.receiving() + Server2_conn.receiving()))
-    elif len(dh_pubkey) == 3:
-        DH_Algorithm_Server1.private_key_generator(dh_pubkey[0])
-        DH_Algorithm_Server2.private_key_generator(dh_pubkey[1])
-        DH_Algorithm_Client.private_key_generator(dh_pubkey[2])
-        dh_pubkey.clear()
-        return False, True
+    while True:
+        if len(dh_pubkey) == 0:
+            Server1_conn.sending(dh_pbkey_s1)
+            dh_pubkey.append(Server1_conn.receiving())
+        elif len(dh_pubkey) == 1:
+            Server2_conn.sending(dh_pbkey_s2)
+            dh_pubkey.append(Server2_conn.receiving())
+        elif len(dh_pubkey) == 2:
+            part1, part2 = File_Manipulation.split_file(dh_pbkey_c)
+            Server1_conn.sending(part1)
+            Server2_conn.sending(part2)
+            dh_pubkey.append((Server1_conn.receiving() + Server2_conn.receiving()))
+        elif len(dh_pubkey) == 3:
+            DH_Algorithm_Server1.private_key_generator(dh_pubkey[0])
+            DH_Algorithm_Server2.private_key_generator(dh_pubkey[1])
+            DH_Algorithm_Client.private_key_generator(dh_pubkey[2])
+            dh_pubkey.clear()
+            return True, False
 
 def key_init():
     if len(big_key_nonce) == 0:
@@ -214,7 +217,7 @@ while not danger:
     if not s1_connected:
         s1_connected = conn_s(1)
         print(s1_connected)
-    elif not s2_connected and s1_connected == True:
+    elif not s2_connected:
         s2_connected = conn_s(2)
         print(s2_connected)
     else:

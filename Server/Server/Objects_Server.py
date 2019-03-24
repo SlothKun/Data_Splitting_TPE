@@ -74,13 +74,11 @@ class Server:
             except select.error:  # avoid error if there's no one to read
                 pass
 
-    def sending(self, data):
-        #if mode == 0:
-        self.socket.sendall(str(data).encode())
-        '''
+    def sending(self, data, mode):
+        if mode == 0:
+            self.socket.sendall(str(data).encode())
         elif mode == 1:
             self.socket.sendall(data)
-        '''
 
 
 class File:

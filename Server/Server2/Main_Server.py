@@ -1,7 +1,8 @@
 import Objects_Server
+import asyncio
 
 # Create Conn Objects
-Client1_conn = Objects_Server.Server("127.0.0.1", 6802)
+Client1_conn = Objects_Server.Server("127.0.0.1", 6801)
 Client2_conn = Objects_Server.Server("127.0.0.1", 6803)
 
 # Create DH_algo Objects
@@ -19,6 +20,7 @@ File_Manipulation = Objects_Server.File()
 # Create some variable
 global danger
 global key_initialised
+
 danger = False
 receiving_sending_mode = 0
 c1_connected = False
@@ -29,12 +31,12 @@ key_initialised = False
 # Create function to clear the code
 def conn_s(client):
     if client == 1:
-        Client1_conn.server_activation()
-        print("Client 1 connected")
-        return True
-    elif client == 2:
         Client2_conn.server_activation()
         print("Client 2 connected")
+        return True
+    elif client == 2:
+        Client1_conn.server_activation()
+        print("Client 1 connected")
         return True
 
 def dh_init():
@@ -43,54 +45,65 @@ def dh_init():
     dh_pbkey_c2 = DH_Algorithm_Client2.public_key_generator()
     while True:
         if len(dh_pubkey) == 0:
-            dh_pubkey.append(Client1_conn.receiving())
-            Client1_conn.sending(dh_pbkey_c1)
-        elif len(dh_pubkey) == 1:
-            dh_pubkey.append(Client2_conn.receiving())
+            dh_pubkey.append(Client2_conn.receiving(0))
             Client2_conn.sending(dh_pbkey_c2)
+        elif len(dh_pubkey) == 1:
+            dh_pubkey.append(Client1_conn.receiving(0))
+            Client1_conn.sending(dh_pbkey_c1)
         elif len(dh_pubkey) == 2:
-            dh_part_key_C1 = Client1_conn.receiving()
-            dh_part_key_C2 = Client2_conn.receiving()
+            dh_part_key_C1 = Client1_conn.receiving(0)
+            dh_part_key_C2 = Client2_conn.receiving(0)
+            print("key C1 : ", dh_part_key_C1)
+            print("key C2 : ", dh_part_key_C2)
             Client1_conn.sending(dh_part_key_C2)
             Client2_conn.sending(dh_part_key_C1)
             dh_pubkey.append((dh_part_key_C1 + dh_part_key_C2))
         elif len(dh_pubkey) == 3:
             DH_Algorithm_Client1.private_key_generator(dh_pubkey[0])
             DH_Algorithm_Client2.private_key_generator(dh_pubkey[1])
+            dh_pubkey.clear()
             return True, False
-
 
 def key_init():
     big_key_nonce = []
-    if len(big_key_nonce) == 0:
-        big_key_nonce.append(DH_Algorithm_Client1.decrypt(Client1_conn.receiving()))
-        key_nonce_sum, key_nonce = KeyFile_Client1.get_big_key_nonce(0, big_key_nonce[0])
-        if not File_Manipulation.file_integrity_check(key_nonce, key_nonce_sum):
-            integrity_failed_closing_protocol("Integrity fail.")
-        else:
-            if data_check(key_nonce) == "ok":
-                KeyFile_Client1.get_big_key_nonce(1, key_nonce)
-    elif len(big_key_nonce) == 1:
-        big_key_nonce.append(DH_Algorithm_Client2.decrypt(Client2_conn.receiving()))
-        key_nonce_sum, key_nonce = KeyFile_Client2.get_big_key_nonce(0, big_key_nonce[0])
-        if not File_Manipulation.file_integrity_check(key_nonce, key_nonce_sum):
-            integrity_failed_closing_protocol("Integrity fail.")
-        else:
-            if data_check(key_nonce) == "ok":
-                KeyFile_Client2.get_big_key_nonce(1, key_nonce)
-    elif len(big_key_nonce) == 2:
-        bkey_nonceC1 = DH_Algorithm_Client1.decrypt(Client1_conn.receiving())
-        bkey_nonceC2 = DH_Algorithm_Client2.decrypt(Client2_conn.receiving())
-        key_nonce_sumC1, key_nonceC1 = KeyFile_Client2.get_big_key_nonce(0, bkey_nonceC1)
-        key_nonce_sumC2, key_nonceC2 = KeyFile_Client2.get_big_key_nonce(0, bkey_nonceC2)
-        if not File_Manipulation.file_integrity_check(key_nonceC1, key_nonce_sumC1) or not File_Manipulation.file_integrity_check(key_nonceC2, key_nonce_sumC2):
-            integrity_failed_closing_protocol("Integrity fail.")
-        else:
-            if data_check(key_nonceC1) == "ok" or data_check(key_nonceC2) == "ok":
-                big_key_nonce.append((bkey_nonceC1 + bkey_nonceC2))
-                Client1_conn.sending(bkey_nonceC2)
-                Client2_conn.sending(bkey_nonceC1)
-                return False
+    while True:
+        if len(big_key_nonce) == 0:
+            encrypted_key, tag, nonce = KeyFile_Client2.get_big_key_nonce(0, Client2_conn.receiving(1))
+            big_key_nonce.append(DH_Algorithm_Client2.decrypt(encrypted_key, tag, nonce))
+            key_nonce_sum, key_nonce = KeyFile_Client2.get_big_key_nonce(1, big_key_nonce[0])
+            if not File_Manipulation.file_integrity_check(key_nonce, key_nonce_sum):
+                integrity_failed_closing_protocol("Integrity fail.")
+            else:
+                if data_check(key_nonce) == "ok":
+                    KeyFile_Client2.get_big_key_nonce(2, key_nonce)
+        elif len(big_key_nonce) == 1:
+            encrypted_key, tag, nonce = KeyFile_Client1.get_big_key_nonce(0, Client1_conn.receiving(1))
+            big_key_nonce.append(DH_Algorithm_Client1.decrypt(encrypted_key, tag, nonce))
+            key_nonce_sum, key_nonce = KeyFile_Client1.get_big_key_nonce(1, big_key_nonce[0])
+            if not File_Manipulation.file_integrity_check(key_nonce, key_nonce_sum):
+                integrity_failed_closing_protocol("Integrity fail.")
+            else:
+                if data_check(key_nonce) == "ok":
+                    KeyFile_Client1.get_big_key_nonce(2, key_nonce)
+        elif len(big_key_nonce) == 2:
+            bkey_nonceC1 = Client1_conn.receiving()
+            bkey_nonceC2 = Client2_conn.receiving()
+            bigpart1, tag1, nonce1 = KeyFile_Client1.get_big_key_nonce(0, bkey_nonceC1)
+            bigpart2, tag2, nonce2 = KeyFile_Client2.get_big_key_nonce(0, bkey_nonceC2)
+            bigpart1 = DH_Algorithm_Client1.decrypt(bigpart1, tag1, nonce1)
+            bigpart2 = DH_Algorithm_Client2.decrypt(bigpart2, tag2, nonce2)
+            bigpart1_sum, bigpart1 = KeyFile_Client1.get_big_key_nonce(1, bigpart1)
+            bigpart2_sum, bigpart2 = KeyFile_Client2.get_big_key_nonce(1, bigpart2)
+            if not File_Manipulation.file_integrity_check(bigpart1, bigpart1_sum) or not File_Manipulation.file_integrity_check(bigpart2, bigpart2_sum):
+                integrity_failed_closing_protocol("Integrity fail.")
+            else:
+                if data_check(bigpart1[1]) == "ok" and data_check(bigpart2[1]) == "ok":
+                    big_key_nonce.append((bigpart1 + bigpart2))
+                    Client1_conn.sending(bkey_nonceC2)
+                    Client2_conn.sending(bkey_nonceC1)
+        elif len(big_key_nonce) == 3:
+            big_key_nonce.clear()
+            return True
 
 def receiving_sending_file(mode):
     keyfile_reload()
@@ -150,8 +163,6 @@ def ping_check():
 
 def keyfile_reload():
     global key_initialised
-    # Reset File_manipulation init
-    File_Manipulation.reset_init()
     # Verify length of nonce and key and take one nonce for each objects
     if not KeyFile_Client1.key_nonce_length_check() or not KeyFile_Client2.key_nonce_length_check():
         key_initialised = False
@@ -159,7 +170,7 @@ def keyfile_reload():
     KeyFile_Client2.nonce_choice()
 
 def integrity_failed_closing_protocol(error):
-    keyfile_reload(1)
+    keyfile_reload()
     AES_Encryption.update_data((File_Manipulation.SHA512_checksum_creation(error) + File_Manipulation.delimiter + error), KeyFile_Client1.key, KeyFile_Client1.nonce)
     Client1_conn.sending(AES_Encryption.encrypt())
     AES_Encryption.update_data((File_Manipulation.SHA512_checksum_creation(error) + File_Manipulation.delimiter + error), KeyFile_Client2.key, KeyFile_Client2.nonce)

@@ -46,25 +46,36 @@ class Server:
     def disconnecting(self):
         self.socket.close()
 
-    def receiving(self):
+    def receiving(self, mode):
         while True:
             try:
-                client_to_read, wlist, xlist = select.select([self.socket], [], [], 0.05)
-            except select.error:  # avoid error if there's no one to read
-                pass
-            finally:
                 try:
-                    if len(client_to_read) != 0:
-                        for client in client_to_read:
-                            self.message_content = b""
-                            self.message_content = client.recv(16777216)
-                            if self.message_content.decode() != "" or self.message_content.decode() != None:
+                    client_to_read, wlist, xlist = select.select([self.socket], [], [], 0.05)
+                    for client in client_to_read:
+                        self.message_content = b""
+                        self.message_content = client.recv(16777216)
+                        if self.message_content:
+                            if mode == 0:
                                 return self.message_content.decode()
+                            elif mode == 1:
+                                return self.message_content
+                            elif mode == 2:
+                                if self.message_content == b'ok':
+                                    return True
+                                else:
+                                    pass
                 except (ConnectionAbortedError, ConnectionResetError):
                     self.client_activation()
+            except select.error:  # avoid error if there's no one to read
+                pass
 
     def sending(self, data):
+        #if mode == 0:
         self.socket.sendall(str(data).encode())
+        '''
+            elif mode == 1:
+                        self.socket.sendall(data)
+        '''
 
 
 class File:
@@ -100,16 +111,21 @@ class DH_algorithm:
         return self.public_key
 
     def private_key_generator(self, friendkey):
-        self.private_key = self.engine.gen_shared_key(int(friendkey.encode()))
+        self.private_key = self.engine.gen_shared_key(int(friendkey))
+        print("key : ", self.private_key)
+        self.private_key = self.private_key[int(len(str(self.private_key)) / 2):].encode()
+        print("cuted key : ", self.private_key)
 
     def encrypt(self, data):
-        cipher = AES.new(self.private_key.encode(), AES.MODE_SIV)
+        nonce = ''.join(rstr.rstr("abcdefghijklmABCDEFGHIJKLM01234nopqrstuvwxyzNOPQRSTUVWXYZ56789", 14))
+        cipher = AES.new(self.private_key, AES.MODE_OCB, nonce=nonce.encode())
         crypted_key, tag = cipher.encrypt_and_digest(data.encode())
-        return crypted_key
+        return crypted_key, tag, nonce.encode()
 
-    def decrypt(self, data):
-        cipher = AES.new(self.private_key.encode(), AES.MODE_SIV)
-        uncrypted_key = cipher.decrypt_and_verify(data.encode())
+    def decrypt(self, data, tag, nonce):
+        print("key : ", self.private_key)
+        cipher = AES.new(self.private_key, AES.MODE_OCB, nonce=nonce)
+        uncrypted_key = cipher.decrypt_and_verify(data, tag)
         return uncrypted_key
 
 
@@ -125,6 +141,7 @@ class Key:
         self.k_choice = 0
         self.delimiter1 = "([-_])"
         self.delimiter2 = ")-_-_("
+        self.delimiter3 = "-)_)-_"
 
     def key_nonce_length_check(self):
         if len(self.big_key_modified) == 32:
@@ -159,11 +176,17 @@ class Key:
 
     def get_big_key_nonce(self, mode, data):
         if mode == 0:
-            splitted_data = data.split(self.delimiter2)
+            datas = data.split(self.delimiter3.encode())
+            tag = datas[0]
+            nonce = datas[2]
+            e_data = datas[1]
+            return e_data, tag, nonce
+        elif mode == 1:
+            splitted_data = data.split(self.delimiter2.encode())
             checksum = splitted_data[0]
             key_nonce = splitted_data[1]
             return checksum, key_nonce
-        elif mode == 1:
+        elif mode == 2:
             data_splitted = data.split(self.delimiter1)
             self.big_key_original = data_splitted[0]
             self.big_key_modified = self.big_key_original
@@ -176,18 +199,23 @@ class AES_Algorithm:
         self.data = ""
         self.key = ""
         self.nonce = ""
+        self.tag = ""
 
-    def update_data(self, data, key, nonce):
+    def update_data(self, data, key, nonce, tag):
         self.data = data
         self.key = key
         self.nonce = nonce
+        if self.tag == None:
+            self.tag = ""
+        else:
+            self.tag = tag
 
     def encrypt(self):
-        cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
-        crypted_data, tag = cipher.encrypt_and_digest(self.data)
+        cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
+        crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
         return crypted_data
 
     def decrypt(self):
-        cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
-        uncrypted_data = cipher.decrypt(self.data)
+        cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
+        uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
         return uncrypted_data

@@ -27,15 +27,19 @@ class Server:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((self.host, self.port_listening))
         s.listen()
-        self.establishing_conn(s)
+        return self.establishing_conn(s)
 
     def establishing_conn(self, sock):
         try:
+            print("in function")
             clientconnect, clientinfo = sock.accept()
             self.socket = clientconnect
+            print("conn accepted")
             ip, port = clientconnect.getpeername()
             if ip in self.whitelisted_client:  # Whitelist application
+                self.socket.send(b"ok")
                 print(ip, " is connected on port : ", port)
+                return True
             else:
                 print("This client isn't whitelisted")
                 print("Closing connection..")
@@ -115,7 +119,6 @@ class DH_algorithm:
         self.private_key = self.engine.gen_shared_key(int(friendkey))
         print("key : ", self.private_key)
         self.private_key = self.private_key[int(len(str(self.private_key)) / 2):].encode()
-        print("cuted key : ", self.private_key)
 
     def encrypt(self, data):
         nonce = ''.join(rstr.rstr("abcdefghijklmABCDEFGHIJKLM01234nopqrstuvwxyzNOPQRSTUVWXYZ56789", 14))
@@ -189,7 +192,7 @@ class Key:
             key_nonce = splitted_data[1]
             return checksum, key_nonce
         elif mode == 2:
-            data_splitted = data.split(self.delimiter1)
+            data_splitted = data.split(self.delimiter1.encode())
             self.big_key_original = data_splitted[0]
             self.big_key_modified = self.big_key_original
             self.big_nonce_original = data_splitted[1]

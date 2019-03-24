@@ -25,16 +25,23 @@ class Client:
     def client_activation(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.establishing_conn(s)
+        return self.establishing_conn(s)
 
     def establishing_conn(self, sock):
         try:
+            print("---- ESTA CONN START ------")
             sock.connect((self.serverhost, self.port_listening))
             self.socket = sock
+            if self.socket.recv(4096) == b'ok':
+                print("connected S2")
+                print("---- ESTA CONN SUCCESS ------")
+                return True
+            else:
+                pass
         except (ConnectionRefusedError, OSError):
+            sleep(2)
             print("error")
-            sleep(1)
-            self.client_activation()
+            pass
 
     def disconnecting(self):
         self.socket.close()

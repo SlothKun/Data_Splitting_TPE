@@ -1,7 +1,8 @@
 import Objects_Client
+from time import sleep
 
 # Create Conn Objects
-Server1_conn = Objects_Client.Client('127.0.0.1', 6800)
+Server1_conn = Objects_Client.Client('127.0.0.1', 6802)
 Server2_conn = Objects_Client.Client('127.0.0.1', 6803)
 
 # Create DH_algo Objects
@@ -37,10 +38,11 @@ def conn_s(server):
     if server == 1:
         return Server1_conn.client_activation()
     elif server == 2:
-        Server2_conn.client_activation()
-        return True
+        return Server2_conn.client_activation()
 
 def dh_init():
+    print(" ")
+    print("------------ DH INIT : END ---------------")
     dh_pubkey = []
     dh_pbkey_s1 = DH_Algorithm_Server1.public_key_generator()
     dh_pbkey_s2 = DH_Algorithm_Server2.public_key_generator()
@@ -49,61 +51,116 @@ def dh_init():
         if len(dh_pubkey) == 0:
             Server2_conn.sending(dh_pbkey_s2, 0)
             dh_pubkey.append(Server2_conn.receiving(0))
+            print("DH key (S2) : ", dh_pubkey[0])
         elif len(dh_pubkey) == 1:
             Server1_conn.sending(dh_pbkey_s1, 0)
             dh_pubkey.append(Server1_conn.receiving(0))
+            print("DH key (S1) : ", dh_pubkey[1])
         elif len(dh_pubkey) == 2:
             part1, part2 = File_Manipulation.split_file(dh_pbkey_c)
-            print("part1 : ", part1)
-            print("part2 : ", part2)
+            print("DH key part1 : ", part1)
+            print("DH key part2 : ", part2)
             Server1_conn.sending(part1, 0)
             Server2_conn.sending(part2, 0)
             dh_pubkey.append((Server1_conn.receiving(0) + Server2_conn.receiving(0)))
         elif len(dh_pubkey) == 3:
+            print("-----GEN PRIVATE KEY : START-----")
             DH_Algorithm_Server2.private_key_generator(dh_pubkey[0])
+            print("Private key S2 : ", DH_Algorithm_Server2.private_key)
             DH_Algorithm_Server1.private_key_generator(dh_pubkey[1])
+            print("Private key S1 : ", DH_Algorithm_Server1.private_key)
             DH_Algorithm_Client.private_key_generator(dh_pubkey[2])
+            print("Private key C : ", DH_Algorithm_Client.private_key)
+            print("-----GEN PRIVATE KEY : END-----")
             dh_pubkey.clear()
+            print("------------ DH INIT : END ---------------")
+            print(" ")
             return True, False
 
 def key_init():
+    print(" ")
+    print("-------KEY INIT : START----------")
     big_key_nonce = []
     while True:
         if len(big_key_nonce) == 0:
+            print(" ")
+            print("-----BIG_KEY_NONCE S2 : START-----")
             KeyFile_Server2.big_key_nonce_generator()
             KeyFile_Server2.key_choice()
             big_key_nonce.append(KeyFile_Server2.big_key_nonce_format(0))
             encrypted_key, tag, nonce = DH_Algorithm_Server2.encrypt((KeyFile_Server2.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(big_key_nonce[0]), big_key_nonce[0])))
+            print("ENCRYPTED KEY : ", encrypted_key)
+            print(type(encrypted_key))
+            print("TAG : ", tag)
+            print(type(tag))
+            print("NONCE : ", nonce)
+            print(type(nonce))
             Server2_conn.sending(KeyFile_Server2.big_key_nonce_format(2, tag, nonce, encrypted_key), 1)
+            print("-----BIG_KEY_NONCE S2 : END-----")
+            print("  ")
         elif len(big_key_nonce) == 1:
+            print(" ")
+            print("-----BIG_KEY_NONCE S1 : START-----")
             KeyFile_Server1.big_key_nonce_generator()
             KeyFile_Server1.key_choice()
             big_key_nonce.append(KeyFile_Server1.big_key_nonce_format(0))
             encrypted_key, tag, nonce = DH_Algorithm_Server1.encrypt((KeyFile_Server1.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(big_key_nonce[1]), big_key_nonce[1])))
+            print("ENCRYPTED KEY : ", encrypted_key)
+            print(type(encrypted_key))
+            print("TAG : ", tag)
+            print(type(tag))
+            print("NONCE : ", nonce)
+            print(type(nonce))
             Server1_conn.sending(KeyFile_Server1.big_key_nonce_format(2, tag, nonce, encrypted_key), 1)
+            print("-----BIG_KEY_NONCE S1 : START-----")
+            print("  ")
         elif len(big_key_nonce) == 2:
+            print(" ")
+            print("-----BIG_KEY_NONCE C1 : START-----")
             bigpart1, tag1, nonce1 = KeyFile_Client.get_big_key_nonce(0, Server1_conn.receiving(1))
+            print("BIGPART 1 KEY : ", bigpart1)
+            print("TAG 1 : ", tag1)
+            print("NONCE 1 : ", nonce1)
             bigpart2, tag2, nonce2 = KeyFile_Client.get_big_key_nonce(0, Server2_conn.receiving(1))
+            print("BIGPART 2 KEY : ", bigpart2)
+            print("TAG 2 : ", tag2)
+            print("NONCE 2 : ", nonce2)
             bigpart1 = DH_Algorithm_Client.decrypt(bigpart1, tag1, nonce1)
             bigpart2 = DH_Algorithm_Client.decrypt(bigpart2, tag2, nonce2)
-            bigpart1_sum, bigpart1 = KeyFile_Client.get_big_key_nonce(1, bigfile1)
-            bigpart2_sum, bigpart2 = KeyFile_Client.get_big_key_nonce(1, bigfile2)
+            bigpart1_sum, bigpart1 = KeyFile_Client.get_big_key_nonce(1, bigpart1)
+            print("BIGPART SUM 1 : ", bigpart1_sum)
+            bigpart2_sum, bigpart2 = KeyFile_Client.get_big_key_nonce(1, bigpart2)
+            print("BIGPART SUM 2 : ", bigpart2_sum)
             if not File_Manipulation.file_integrity_check(bigpart1, bigpart1_sum) or not File_Manipulation.file_integrity_check(bigpart2, bigpart2_sum):
                 integrity_failed_closing_protocol("Integrity fail.")
             else:
                 if data_check(bigpart1[1]) == "ok" and data_check(bigpart2[1]) == "ok":
                     bigfile = (bigpart1 + bigpart2)
                     KeyFile_Client.get_big_key_nonce(2, bigfile)
+                    print("KEY : ", KeyFile_Client.big_key_original)
+                    print("Nonce : ", KeyFile_Client.big_nonce_original)
                     big_key_nonce.append(bigfile)
+            print("-----BIG_KEY_NONCE C1 : END-----")
+            print(" ")
         elif len(big_key_nonce) == 3:
+            print(" ")
+            print("-----BIG_KEY_NONCE C2 : START-----")
             KeyFile_Mine.big_key_nonce_generator()
             KeyFile_Mine.key_choice()
             big_key_nonce.append(KeyFile_Mine.big_key_nonce_format(0))
             part1, part2 = File_Manipulation.split_file(big_key_nonce[2])
             encrypted_key, tag, nonce = DH_Algorithm_Client.encrypt((KeyFile_Server1.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(part1), part1)))
             Server1_conn.sending(KeyFile_Client.big_key_nonce_format(2, tag, nonce, encrypted_key), 1)
+            print("ENCRYPTED KEY : ", encrypted_key)
+            print("TAG : ", tag)
+            print("NONCE : ", nonce)
             encrypted_key, tag, nonce = DH_Algorithm_Client.encrypt((KeyFile_Server2.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(part2), part2)))
             Server2_conn.sending(KeyFile_Client.big_key_nonce_format(2, tag, nonce, encrypted_key), 1)
+            print("ENCRYPTED KEY : ", encrypted_key)
+            print("TAG : ", tag)
+            print("NONCE : ", nonce)
+            print("-----BIG_KEY_NONCE C2 : END-----")
+            print(" ")
         elif len(big_key_nonce) == 4:
             big_key_nonce.clear()
             return True
@@ -221,13 +278,63 @@ def total_disconnection():
     Server2_conn.disconnecting()
     danger = True
 
+
+sleep(4)
+i = 0
+while not s2_connected:
+    print("trying to connect to S2 : ")
+    i += 1
+    s2_connected = conn_s(2)
+    print("s2 state : ", s2_connected)
+while not s1_connected:
+    print("trying to connect to S1 : ")
+    s1_connected = conn_s(1)
+    print("s1 state : ", s1_connected)
+while not dh_initialised:
+    dh_initialised, key_initialised = dh_init()
+while not key_initialised:
+    key_initialised = key_init()
+
+print("3 premieres etapes OK !")
+
+
+
+'''
 while not danger:
-    if not s1_connected:
-        s1_connected = conn_s(1)
-        print(s1_connected)
-    elif not s2_connected:
+    if s2_connected:
+        if s1_connected:
+            if dh_initialised:
+                if key_initialised:
+                    if my_turn:
+                        my_turn = sending_file()
+                    else:
+                        my_turn = receiving_file()
+                else:
+                    key_initialised = key_init()
+            else:
+                dh_initialised, key_initialised = dh_init()
+        else:
+            s1_connected = conn_s(1)
+            print(s1_connected)
+    else:
         s2_connected = conn_s(2)
         print(s2_connected)
+'''
+
+
+
+
+
+
+
+'''
+while not danger:
+    if not s2_connected:
+        s2_connected = conn_s(2)
+        print(s2_connected)
+    elif not s1_connected:
+        s1_connected = conn_s(1)
+        print(s1_connected)
     else:
         if not dh_initialised:  # Initialise DH_algo key creation / send
             dh_initialised, key_initialised = dh_init()
@@ -238,3 +345,4 @@ while not danger:
                 my_turn = sending_file()
             else:
                 my_turn = receiving_file()
+'''

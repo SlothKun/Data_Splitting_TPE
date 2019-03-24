@@ -24,9 +24,7 @@ File_Manipulation = Objects_Client.File()
 # Create some variable
 global danger
 global key_initialised
-global sockets
 
-sockets = []
 danger = False
 my_turn = True
 s1_connected = False
@@ -119,12 +117,16 @@ def key_init():
             KeyFile_Mine.key_choice()
             big_key_nonce.append(KeyFile_Mine.big_key_nonce_format(0))
             part1, part2 = File_Manipulation.split_file(big_key_nonce[2])
-            encrypted_key, tag, nonce = DH_Algorithm_Client.encrypt((KeyFile_Server1.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(part1), part1)))
+            part1_sum = File_Manipulation.SHA512_checksum_creation(part1)
+            print("PART 1 SUM : ", part1_sum)
+            encrypted_key, tag, nonce = DH_Algorithm_Client.encrypt((KeyFile_Server1.big_key_nonce_format(1, part1_sum, part1)))
             Server1_conn.sending(KeyFile_Client.big_key_nonce_format(2, tag, nonce, encrypted_key), 1)
             print("ENCRYPTED KEY : ", encrypted_key)
             print("TAG : ", tag)
             print("NONCE : ", nonce)
-            encrypted_key, tag, nonce = DH_Algorithm_Client.encrypt((KeyFile_Server2.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(part2), part2)))
+            part2_sum = File_Manipulation.SHA512_checksum_creation(part2)
+            print("PART 2 SUM : ", part2_sum)
+            encrypted_key, tag, nonce = DH_Algorithm_Client.encrypt((KeyFile_Server2.big_key_nonce_format(1, part2_sum, part2)))
             Server2_conn.sending(KeyFile_Client.big_key_nonce_format(2, tag, nonce, encrypted_key), 1)
             print("ENCRYPTED KEY : ", encrypted_key)
             print("TAG : ", tag)
@@ -148,7 +150,7 @@ def key_init():
             print("BIGPART SUM 1 : ", bigpart1_sum)
             bigpart2_sum, bigpart2 = KeyFile_Client.get_big_key_nonce(1, bigpart2)
             print("BIGPART SUM 2 : ", bigpart2_sum)
-            if not File_Manipulation.file_integrity_check(bigpart1, bigpart1_sum) or not File_Manipulation.file_integrity_check(bigpart2, bigpart2_sum):
+            if not File_Manipulation.file_integrity_check(bigpart1, bigpart1_sum.decode()) or not File_Manipulation.file_integrity_check(bigpart2, bigpart2_sum.decode()):
                 integrity_failed_closing_protocol("Integrity fail.")
             else:
                 if data_check(bigpart1[1]) == "ok" and data_check(bigpart2[1]) == "ok":
@@ -295,6 +297,7 @@ while not dh_initialised:
 while not key_initialised:
     key_initialised = key_init()
 
+print("3 phases end !")
 
 
 

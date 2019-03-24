@@ -275,18 +275,18 @@ class Key:
 
     def get_big_key_nonce(self, mode, data):
         if mode == 0:
-            datas = data.split(self.delimiter3)
+            datas = data.split(self.delimiter3.encode())
             tag = datas[0]
             nonce = datas[2]
             e_data = datas[1]
             return e_data, tag, nonce
         elif mode == 1:
-            splitted_data = data.split(self.delimiter2)
+            splitted_data = data.split(self.delimiter2.encode())
             checksum = splitted_data[0]
             key_nonce = splitted_data[1]
             return checksum, key_nonce
         elif mode == 2:
-            data_splitted = data.split(self.delimiter1)
+            data_splitted = data.split(self.delimiter1.encode())
             self.big_key_original = data_splitted[0]
             self.big_key_modified = self.big_key_original
             self.big_nonce_original = data_splitted[1]

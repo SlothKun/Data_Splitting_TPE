@@ -131,7 +131,7 @@ def key_init():
             print("BIGPART SUM 1 : ", bigpart1_sum)
             bigpart2_sum, bigpart2 = KeyFile_Client.get_big_key_nonce(1, bigpart2)
             print("BIGPART SUM 2 : ", bigpart2_sum)
-            if not File_Manipulation.file_integrity_check(bigpart1, bigpart1_sum) or not File_Manipulation.file_integrity_check(bigpart2, bigpart2_sum):
+            if not File_Manipulation.file_integrity_check(bigpart1, bigpart1_sum.decode()) or not File_Manipulation.file_integrity_check(bigpart2, bigpart2_sum.decode()):
                 integrity_failed_closing_protocol("Integrity fail.")
             else:
                 if data_check(bigpart1[1]) == "ok" and data_check(bigpart2[1]) == "ok":

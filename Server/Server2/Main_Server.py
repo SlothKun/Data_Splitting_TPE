@@ -92,6 +92,7 @@ def key_init():
             else:
                 if data_check(key_nonce) == "ok":
                     KeyFile_Client2.get_big_key_nonce(2, key_nonce)
+                    KeyFile_Client2.key_choice()
                     print("KEY : ", KeyFile_Client2.key)
                     print("NONCE : ", KeyFile_Client2.nonce)
             print("-----BIG_KEY_NONCE C2 : END-----")
@@ -112,6 +113,7 @@ def key_init():
             else:
                 if data_check(key_nonce) == "ok":
                     KeyFile_Client1.get_big_key_nonce(2, key_nonce)
+                    KeyFile_Client1.key_choice()
                     print("KEY : ", KeyFile_Client1.key)
                     print("NONCE : ", KeyFile_Client1.nonce)
             print("-----BIG_KEY_NONCE C1 : END-----")
@@ -161,27 +163,38 @@ def key_init():
             return True
 
 def receiving_sending_file(mode):
+    print(" ")
+    print("-----RECEIVING FILE : START-----")
     keyfile_reload()
     if mode == 0:
-        crypted_file = Client1_conn.receiving()
-        AES_Encryption.update_data(crypted_file, KeyFile_Client1.key, KeyFile_Client1.nonce)
+        crypted_file = Client1_conn.receiving(1)
+        AES_Encryption.update_data(crypted_file, KeyFile_Client1.key, KeyFile_Client1.nonce, "")
+        print("Key C1 : ", KeyFile_Client1.key)
+        print("Nonce C1 : ", KeyFile_Client1.nonce)
         file_sum, uncrypted_file = File_Manipulation.get_file_information(AES_Encryption.decrypt())
         if not File_Manipulation.file_integrity_check(uncrypted_file, file_sum):
             integrity_failed_closing_protocol("Integrity fail.")
         else:
             if data_check(uncrypted_file) == "ok":
-                AES_Encryption.update_data(File_Manipulation.format_file(uncrypted_file, file_sum), KeyFile_Client2.key, KeyFile_Client2.nonce)
+                AES_Encryption.update_data(File_Manipulation.format_file(uncrypted_file, file_sum), KeyFile_Client2.key, KeyFile_Client2.nonce, "")
                 Client2_conn.sending(AES_Encryption.encrypt())
+                print("-----RECEIVING FILE : END-----")
+                print(" ")
     elif mode == 1:
+        print(" ")
+        print("-----SENDING FILE : START-----")
         crypted_file = Client2_conn.receiving()
-        AES_Encryption.update_data(crypted_file, KeyFile_Client2.key, KeyFile_Client2.nonce)
+        AES_Encryption.update_data(crypted_file, KeyFile_Client2.key, KeyFile_Client2.nonce, "")
         file_sum, uncrypted_file = File_Manipulation.get_file_information(AES_Encryption.decrypt())
         if not File_Manipulation.file_integrity_check(uncrypted_file, file_sum):
             integrity_failed_closing_protocol("Integrity fail.")
         else:
             if data_check(uncrypted_file) == "ok":
-                AES_Encryption.update_data(File_Manipulation.format_file(uncrypted_file, file_sum), KeyFile_Client1.key, KeyFile_Client1.nonce)
+                AES_Encryption.update_data(File_Manipulation.format_file(uncrypted_file, file_sum), KeyFile_Client1.key, KeyFile_Client1.nonce, "")
                 Client1_conn.sending(AES_Encryption.encrypt())
+                print("-----SENDING FILE : END-----")
+                print(" ")
+
 def data_check(data):
     if data == "ping":
         ping_or_pong("pong")
@@ -202,8 +215,8 @@ def ping_or_pong(ping_pong):
 
 def ping_check():
     keyfile_reload()
-    received_data1 = Client1_conn.receiving()
-    received_data2 = Client2_conn.receiving()
+    received_data1 = Client1_conn.receiving(1)
+    received_data2 = Client2_conn.receiving(1)
     AES_Encryption.update_data(received_data1, KeyFile_Client1.key, KeyFile_Client1.nonce)
     decrypted_data1 = AES_Encryption.decrypt().split(File_Manipulation.delimiter2)
     AES_Encryption.update_data(received_data2, KeyFile_Client2.key, KeyFile_Client2.nonce)
@@ -242,6 +255,7 @@ def total_disconnection():
 
 sleep(3)
 i = 0
+'''
 while not c2_connected:
     print("trying to connect to C2 : ")
     c2_connected = conn_s(2)
@@ -256,20 +270,14 @@ while not key_initialised:
     key_initialised = key_init()
 
 print("3 premieres etapes OK !")
-
-
-
-
-
-
 '''
+
+
 while not danger:
     if not c2_connected:
         c2_connected = conn_s(2)
-        print("connected C2")
     elif not c1_connected:
         c1_connected = conn_s(1)
-
     else:
         if not dh_initialised:  # Initialise DH_algo key creation / send
             dh_initialised, key_initialised = dh_init()
@@ -282,31 +290,4 @@ while not danger:
             elif receiving_sending_mode == 1:
                 receiving_sending_file(receiving_sending_mode)
                 receiving_sending_mode = 0
-'''
-
-
-'''
-while not danger:
-    if c2_connected:
-        if c1_connected:
-            if dh_initialised:
-                if key_initialised:
-                    if receiving_sending_mode == 0:
-                        receiving_sending_file(receiving_sending_mode)
-                        receiving_sending_mode = 1
-                    elif receiving_sending_mode == 1:
-                        receiving_sending_file(receiving_sending_mode)
-                        receiving_sending_mode = 0
-                else:
-                    key_initialised = key_init()
-            else:
-                dh_initialised, key_initialised = dh_init()
-        else:
-            c1_connected = conn_s(1)
-            print("connected C1")
-    else:
-        c2_connected = conn_s(2)
-        print("connected C2")
-'''
-
 

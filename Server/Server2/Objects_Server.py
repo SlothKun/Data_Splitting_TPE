@@ -85,7 +85,13 @@ class File:
         self.delimiter = "#&_#"
 
     def get_file_information(self, file):
-        cuted_file = file.split(self.delimiter)
+        print("FILLLEEEEE")
+        print(file)
+        cuted_file = file.split(self.delimiter.encode())
+        print("CUTED FIIILLLLLLEEEEEEEEEEEEEEE")
+        print(cuted_file)
+        print(type(cuted_file))
+        print(len(cuted_file))
         return cuted_file[0], cuted_file[1]
 
     def format_file(self, data, sum):
@@ -144,23 +150,24 @@ class Key:
         self.delimiter3 = "-)_)-_"
 
     def key_nonce_length_check(self):
-        if len(self.big_key_modified) == 32:
+        if len(self.big_key_modified) <= 32:
             return False
         elif len(self.big_nonce_modified) <= 512:
             self.key_choice()
             self.big_nonce_modified = self.big_nonce_original
 
-     # /!\ MODIFIER LE NONCE ET LE KEY CHOICE /!\
     def nonce_choice(self):
         if self.n_choice == 0:
             self.n_choice = 1
-            self.nonce = self.big_nonce_modified[-128:-64]
+            print(self.big_nonce_modified)
+            self.nonce = self.big_nonce_modified[-30:-15]
+            print(len(self.nonce))
         elif self.n_choice == 1:
             self.n_choice = 2
-            self.nonce = self.big_nonce_modified[:-64]
+            self.nonce = self.big_nonce_modified[-15:]
         elif self.n_choice == 2:
             self.n_choice = 0
-            self.nonce = self.big_nonce_modified[64:]
+            self.nonce = self.big_nonce_modified[:15]
 
     def key_choice(self):
         if self.k_choice == 0:
@@ -172,7 +179,6 @@ class Key:
         elif self.k_choice == 2:
             self.k_choice = 0
             self.key = self.big_key_modified[-64:-32]
-    # /!\ MODIFIER LE NONCE ET LE KEY CHOICE /!\
 
     def get_big_key_nonce(self, mode, data):
         if mode == 0:
@@ -205,17 +211,34 @@ class AES_Algorithm:
         self.data = data
         self.key = key
         self.nonce = nonce
-        if self.tag == None:
-            self.tag = ""
-        else:
-            self.tag = tag
+        self.tag = tag
 
     def encrypt(self):
-        cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
-        crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
-        return crypted_data
+        try:
+            cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce.encode())
+            crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+            return crypted_data
+        except AttributeError:
+            try:
+                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
+                crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+                return crypted_data
+            except AttributeError:
+                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
+                crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+                return crypted_data
 
     def decrypt(self):
-        cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
-        uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
-        return uncrypted_data
+        try:
+            cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
+            uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
+            return uncrypted_data
+        except AttributeError:
+            try:
+                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
+                uncrypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+                return uncrypted_data
+            except AttributeError:
+                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
+                uncrypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+                return uncrypted_data

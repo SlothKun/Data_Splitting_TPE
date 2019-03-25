@@ -8,13 +8,14 @@ import pathlib
 import hashlib
 import rstr
 import tkinter
-import tkinter.filedialog
+from tkinter.filedialog import *
 import pyDH
 import self as self
 from Crypto.Cipher import AES
 from Crypto import Random
 import base64
 from time import sleep
+import Client1_Interface
 
 class Client:
     def __init__(self, serverhost, port):
@@ -108,10 +109,7 @@ class File:  # modify
         self.crypted_file_part2 = ""
 
     def ask_file(self):
-        root = tkinter.Tk()
-        root.withdraw()
-        get_file = tkinter.filedialog.askopenfilename()
-        with open(get_file, 'rb') as file_opened:
+        with open(Client1_Interface.selection(), 'rb') as file_opened:
             self.uncrypted_full_file = file_opened.read()
             full_file_name = ",".join(file_opened.name.rsplit("/", 1)[1:])
             self.file_name = ",".join(full_file_name.rsplit(".", 1)[:1])
@@ -157,8 +155,8 @@ class File:  # modify
 
     def split_file(self, data):
         if data == 0:
-            self.unrecrypted_file_part1 = self.crypted_full_file[:int(len(self.crypted_full_file/2))]
-            self.unrecrypted_file_part2 = self.crypted_full_file[int(len(self.crypted_full_file/2)):]
+            self.unrecrypted_file_part1 = self.crypted_full_file[:int(len(self.crypted_full_file)/2)]
+            self.unrecrypted_file_part2 = self.crypted_full_file[int(len(self.crypted_full_file)/2):]
         else:
             print("data : ", data)
             splitted_data1 = str(data)[:int(len(str(data)) /2)]
@@ -174,15 +172,15 @@ class File:  # modify
         f.close()
 
     def SHA512_checksum_creation(self, file):
-        return hashlib.sha512(file.encode()).hexdigest()
+        return hashlib.sha512(file).hexdigest()
 
     def format_file(self, which_format):
         if which_format == 0:
-            self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1) + self.delimiter1 + self.file_extension + self.delimiter1 + self.file_name + self.delimiter1 + self.unrecrypted_file_part1
-            self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2) + self.delimiter1 + self.file_extension + self.delimiter1 + self.file_name + self.delimiter1 + self.unrecrypted_file_part2
+            self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1).encode() + self.delimiter1.encode() + self.file_extension.encode() + self.delimiter1.encode() + self.file_name.encode() + self.delimiter1.encode() + self.unrecrypted_file_part1
+            self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2).encode() + self.delimiter1.encode() + self.file_extension.encode() + self.delimiter1.encode() + self.file_name.encode() + self.delimiter1.encode() + self.unrecrypted_file_part2
         elif which_format == 1:
-            self.full_format_file_part1 = self.file_part1_sum + self.delimiter2 + self.full_format_file_part1
-            self.full_format_file_part2 = self.file_part2_sum + self.delimiter2 + self.full_format_file_part2
+            self.full_format_file_part1 = self.file_part1_sum.encode() + self.delimiter2.encode() + self.full_format_file_part1
+            self.full_format_file_part2 = self.file_part2_sum.encode() + self.delimiter2.encode() + self.full_format_file_part2
 
     def part_format_generator(self, size, part_number):
         if part_number == 1:
@@ -245,7 +243,7 @@ class Key:
         return self.big_key_original, self.big_nonce_original
 
     def key_nonce_length_check(self):
-        if len(self.big_key_modified) == 32:
+        if len(self.big_key_modified) <= 32:
             return False
         elif len(self.big_nonce_modified) <= 512:
             self.key_choice()
@@ -254,13 +252,15 @@ class Key:
     def nonce_choice(self):
         if self.n_choice == 0:
             self.n_choice = 1
-            self.nonce = self.big_nonce_modified[-128:-64]
+            print(self.big_nonce_modified)
+            self.nonce = self.big_nonce_modified[-30:-15]
+            print(len(self.nonce))
         elif self.n_choice == 1:
             self.n_choice = 2
-            self.nonce = self.big_nonce_modified[:-64]
+            self.nonce = self.big_nonce_modified[-15:]
         elif self.n_choice == 2:
             self.n_choice = 0
-            self.nonce = self.big_nonce_modified[64:]
+            self.nonce = self.big_nonce_modified[:15]
 
     def key_choice(self):
         if self.k_choice == 0:
@@ -313,17 +313,34 @@ class AES_Algorithm:
         self.data = data
         self.key = key
         self.nonce = nonce
-        if self.tag == None:
-            self.tag = ""
-        else:
-            self.tag = tag
+        self.tag = tag
 
     def encrypt(self):
-        cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
-        crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
-        return crypted_data
+        try:
+            cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce.encode())
+            crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+            return crypted_data
+        except AttributeError:
+            try:
+                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
+                crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+                return crypted_data
+            except AttributeError:
+                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
+                crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+                return crypted_data
 
     def decrypt(self):
-        cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
-        uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
-        return uncrypted_data
+        try:
+            cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
+            uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
+            return uncrypted_data
+        except AttributeError:
+            try:
+                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
+                uncrypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+                return uncrypted_data
+            except AttributeError:
+                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
+                uncrypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+                return uncrypted_data

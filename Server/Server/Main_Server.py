@@ -254,34 +254,41 @@ def key_init():
 
 
 def receiving_sending_file(mode):
-    print(" ")
-    print("-----RECEIVING FILE : START-----")
+
     keyfile_reload()
     if mode == 0:
+        print(" ")
+        print("-----RECEIVING FILE : START-----")
         crypted_file = Client1_conn.receiving(1)
-        AES_Encryption.update_data(crypted_file, KeyFile_Client1.key, KeyFile_Client1.nonce, "")
-        file_sum, uncrypted_file = File_Manipulation.get_file_information(AES_Encryption.decrypt())
-        if not File_Manipulation.file_integrity_check(uncrypted_file, file_sum):
+        tag, crypted_file = crypted_file.split(KeyFile_Client1.delimiter3.encode())
+        AES_Encryption.update_data(crypted_file, KeyFile_Client1.key, KeyFile_Client1.nonce, tag)
+        decryptage = AES_Encryption.decrypt()
+        file_sum, uncrypted_file = File_Manipulation.get_file_information(decryptage)
+        if not File_Manipulation.file_integrity_check(uncrypted_file, file_sum.decode()):
             integrity_failed_closing_protocol("Integrity fail.")
         else:
             if data_check(uncrypted_file) == "ok":
                 AES_Encryption.update_data(File_Manipulation.format_file(uncrypted_file, file_sum), KeyFile_Client2.key, KeyFile_Client2.nonce, "")
-                Client2_conn.sending(AES_Encryption.encrypt())
+                encrypted, tag = AES_Encryption.encrypt()
+                Client2_conn.sending((tag + KeyFile_Client2.delimiter3.encode() + encrypted), 1)
                 print("-----RECEIVING FILE : END-----")
                 print(" ")
     elif mode == 1:
         print(" ")
-        print("-----SENDING FILE : START-----")
-        crypted_file = Client2_conn.receiving()
-        AES_Encryption.update_data(crypted_file, KeyFile_Client2.key, KeyFile_Client2.nonce, "")
-        file_sum, uncrypted_file = File_Manipulation.get_file_information(AES_Encryption.decrypt())
-        if not File_Manipulation.file_integrity_check(uncrypted_file, file_sum):
+        print("-----RECEIVING2 FILE : START-----")
+        crypted_file = Client2_conn.receiving(1)
+        tag, crypted_file = crypted_file.split(KeyFile_Client2.delimiter3.encode())
+        AES_Encryption.update_data(crypted_file, KeyFile_Client2.key, KeyFile_Client2.nonce, tag)
+        decryptage = AES_Encryption.decrypt()
+        file_sum, uncrypted_file = File_Manipulation.get_file_information(decryptage)
+        if not File_Manipulation.file_integrity_check(uncrypted_file, file_sum.decode()):
             integrity_failed_closing_protocol("Integrity fail.")
         else:
             if data_check(uncrypted_file) == "ok":
                 AES_Encryption.update_data(File_Manipulation.format_file(uncrypted_file, file_sum), KeyFile_Client1.key, KeyFile_Client1.nonce, "")
-                Client1_conn.sending(AES_Encryption.encrypt())
-                print("-----SENDING FILE : END-----")
+                encrypted, tag = AES_Encryption.encrypt()
+                Client1_conn.sending((tag + KeyFile_Client1.delimiter3.encode() + encrypted), 1)
+                print("-----RECEIVING2 FILE : END-----")
                 print(" ")
 
 def data_check(data):
@@ -327,7 +334,7 @@ def keyfile_reload():
     KeyFile_Client2.nonce_choice()
 
 def integrity_failed_closing_protocol(error):
-    keyfile_reload(0)
+    keyfile_reload()
     AES_Encryption.update_data((File_Manipulation.SHA512_checksum_creation(error) + File_Manipulation.delimiter + error), KeyFile_Client1.key, KeyFile_Client1.nonce)
     Client1_conn.sending(AES_Encryption.encrypt())
     AES_Encryption.update_data((File_Manipulation.SHA512_checksum_creation(error) + File_Manipulation.delimiter + error), KeyFile_Client2.key, KeyFile_Client2.nonce)
@@ -356,7 +363,7 @@ while not dh_initialised:
     dh_initialised, key_initialised = dh_init()
 while not key_initialised:
     key_initialised = key_init()
-while danger:
+while not danger:
     if receiving_sending_mode == 0:
         receiving_sending_file(receiving_sending_mode)
         receiving_sending_mode = 1

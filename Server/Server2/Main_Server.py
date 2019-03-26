@@ -260,6 +260,8 @@ def receiving_sending_file(mode):
         else:
             if data_check(uncrypted_file) == "ok":
                 AES_Encryption.update_data(File_Manipulation.format_file(uncrypted_file, file_sum), KeyFile_Client2.key, KeyFile_Client2.nonce, "")
+                print("Key CLIENT 2 : ", KeyFile_Client2.key)
+                print("nonce CLIENT 2 : ", KeyFile_Client2.nonce)
                 encrypted, tag = AES_Encryption.encrypt()
                 Client2_conn.sending((tag + KeyFile_Client2.delimiter3.encode() + encrypted), 1)
                 print("-----RECEIVING FILE : END-----")

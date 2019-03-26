@@ -10,7 +10,7 @@ f = "black"
 def homepage():
     r = Tk()
     r.title("TPE Client Page d'accueil")
-    r.geometry("350x250")
+    r.geometry("350x250+65+35")
     r["bg"] = b
     r.resizable(False, False)
     c = Canvas(r, width=354, height=254, bg=b, bd=0)
@@ -18,18 +18,17 @@ def homepage():
     c.place(x=-2, y=-2)
     c.create_text(175, 50, fill=f, font="courier 20", text="Data Splitting:\n   ClientSide")
     b1 = Button(r, text="     START     ", bg=b, fg=f, command=lambda: connexionserveur())
-    b1.place(x=50, y=120)
+    b1.place(x=135, y=95)
     b2 = Button(r, text="     SETTINGS     ", bg=b, fg=f)
-    b2.place(x=200, y=120)
+    b2.place(x=130, y=130)
     b3 = Button(r, text="     QUIT     ", bg=b, fg=f, command = r.destroy)
-    b3.place(x=125, y=170)
+    b3.place(x=140, y=170)
 
     r.mainloop()
-
 # ///// interface 2 \\\\\
 def selection():
     r = Tk()
-    r.geometry("350x250")
+    r.geometry("350x250+65+35")
     r.resizable(False, False)
 
     #canvas = Canvas(r, width=354, height=254, bg="white")
@@ -46,7 +45,7 @@ def selection():
 def connexionserveur():
     r = Tk()
     r.title("TPE Connexion Serveurs")
-    r.geometry("350x250")
+    r.geometry("350x250+65+35")
     r["bg"] = b
     r.resizable(False, False)
     c = Canvas(r, width=354, height=254, bg=b, bd=0)
@@ -88,7 +87,7 @@ def attenteinteraction():
 def cryptage():
     r = Tk()
     r.title("Cryptage")
-    r.geometry("350x250")
+    r.geometry("350x250+65+35")
     r.resizable(False, False)
 
     photo = PhotoImage(file="intCDC.png")
@@ -103,7 +102,7 @@ def cryptage():
 # ///// interface 5 \\\\\
 def decryptage():
     r = Tk()
-    r.geometry("350x250")
+    r.geometry("350x250+65+35")
     r.resizable(False, False)
     r.title("Decryptage")
 
@@ -119,7 +118,7 @@ def decryptage():
 # ///// interface 6 \\\\\
 def envoi():
     r = Tk()
-    r.geometry("350x250")
+    r.geometry("350x250+65+35")
     r.resizable(False, False)
 
     photo = PhotoImage (file="envoi.png")
@@ -139,7 +138,7 @@ def envoi():
 # ///// interface 9 \\\\\
 def reception():
     r = Tk()
-    r.geometry("350x250")
+    r.geometry("350x250+65+35")
     r.resizable(0, 0)
     r.title("TPE Reception")
 
@@ -161,7 +160,7 @@ def reception():
 def split():
     r = Tk()
     r.title("TPE Split")
-    r.geometry("350x250")
+    r.geometry("350x250+65+35")
     r.resizable(False, False)
 
     photosd = PhotoImage(file="file sd.png")
@@ -182,7 +181,7 @@ def split():
 def rassemble():
     r = Tk()
     r.title("Rassemblement")
-    r.geometry("350x250")
+    r.geometry("350x250+65+35")
     r.resizable(False, False)
 
     photosd = PhotoImage(file="file sd.png")
@@ -203,7 +202,7 @@ def rassemble():
 def DH_init():  # Alternate img
     r = Tk()
     r.title("DH initialisation")
-    r.geometry("350x250")
+    r.geometry("350x250+65+35")
     r.resizable(False, False)
 
     tick = PhotoImage(file="tickmodif.png")
@@ -237,7 +236,7 @@ def DH_init():  # Alternate img
 def Key_init(): # Alternate img
     r = Tk()
     r.title("Clés initialisation")
-    r.geometry("350x250")
+    r.geometry("350x250+65+35")
     r.resizable(False, False)
 
     tick = PhotoImage(file="tickmodif25.png")

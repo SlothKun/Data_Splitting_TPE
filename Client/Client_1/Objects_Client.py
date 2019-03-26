@@ -90,7 +90,10 @@ class File:  # modify
         self.file_part2_sum = ""
         self.crypted_file_part2 = ""
         self.full_format_file_part2 = ""
-        self.tag_first_encryption = ""
+        self.tag_first_encryption1 = ""
+        self.tag_first_encryption2 = ""
+        self.tag_second_encryption1 = ""
+        self.tag_second_encryption2 = ""
 
     def reset_init(self):
         self.uncrypted_full_file = ""
@@ -108,7 +111,10 @@ class File:  # modify
         self.file_part2_sum = ""
         self.full_format_file_part2 = ""
         self.crypted_file_part2 = ""
-        self.tag_first_encryption = ""
+        self.tag_first_encryption1 = ""
+        self.tag_first_encryption2 = ""
+        self.tag_second_encryption1 = ""
+        self.tag_second_encryption2 = ""
 
     def ask_file(self):
         with open(Client1_Interface.selection(), 'rb') as file_opened:
@@ -125,15 +131,17 @@ class File:  # modify
                 name_from_part = []
                 file_sum_from_part = []
                 for data in file:
-                    splitted_informations = data.split(self.delimiter1)
+                    splitted_informations = data.split(self.delimiter1.encode())
                     if re.findall("[a-m]*[A-M]*[0-4]*", splitted_informations[0].decode()) != False:
                         extension_from_part.append(splitted_informations[1].decode())
                         name_from_part.append(splitted_informations[2].decode())
-                        self.unrecrypted_file_part1 = splitted_informations[3]
+                        self.tag_first_encryption1 = splitted_informations[3]
+                        self.unrecrypted_file_part1 = splitted_informations[4]
                     elif re.findall("[h-n]*[H-N]*[5-9]*", splitted_informations[0].decode()) != False:
                         extension_from_part.append(splitted_informations[1].decode())
                         name_from_part.append(splitted_informations[2].decode())
-                        self.unrecrypted_file_part2 = splitted_informations[3]
+                        self.tag_first_encryption2 = splitted_informations[3]
+                        self.unrecrypted_file_part2 = splitted_informations[4]
 
                 part_1_list = [extension_from_part[0], name_from_part[0]]
                 part_2_list = [extension_from_part[1], name_from_part[1]]

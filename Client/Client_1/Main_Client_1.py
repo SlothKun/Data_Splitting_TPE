@@ -249,8 +249,6 @@ def sending_file():
     print("Nonce S1 : ", KeyFile_Server1.nonce)
     print("Encrypted : ", encrypted)
     Server1_conn.sending((tag + KeyFile_Server1.delimiter3.encode() + encrypted), 1)
-
-
     AES_Encryption.update_data(File_Manipulation.full_format_file_part2, KeyFile_Server2.key, KeyFile_Server2.nonce, "")
     encrypted, tag = AES_Encryption.encrypt()
     print("Key S2 : ", KeyFile_Server2.key)
@@ -269,26 +267,28 @@ def receiving_file():
     # Part manipulation
     File_Manipulation.crypted_file_part1 = Server1_conn.receiving(1)
     File_Manipulation.crypted_file_part2 = Server2_conn.receiving(1)
-    AES_Encryption.update_data(File_Manipulation.crypted_file_part1, KeyFile_Server1.key, KeyFile_Server1.nonce)
+    File_Manipulation.tag_second_encryption1, File_Manipulation.crypted_file_part1 = File_Manipulation.crypted_file_part1.split(KeyFile_Server1.delimiter3.encode())
+    File_Manipulation.tag_second_encryption2, File_Manipulation.crypted_file_part2 = File_Manipulation.crypted_file_part2.split(KeyFile_Server2.delimiter3.encode())
+    AES_Encryption.update_data(File_Manipulation.crypted_file_part1, KeyFile_Server1.key, KeyFile_Server1.nonce.encode(), File_Manipulation.tag_second_encryption1)
     File_Manipulation.full_format_file_part1 = AES_Encryption.decrypt()
-    AES_Encryption.update_data(File_Manipulation.crypted_file_part2, KeyFile_Server2.key, KeyFile_Server2.nonce)
+    AES_Encryption.update_data(File_Manipulation.crypted_file_part2, KeyFile_Server2.key, KeyFile_Server2.nonce.encode(), File_Manipulation.tag_second_encryption2)
+    print("nonce CLIENT 2 : ", KeyFile_Server2.nonce)
+    print("Key CLIENT 2 : ", KeyFile_Server2.key)
     File_Manipulation.full_format_file_part2 = AES_Encryption.decrypt()
-    part1_sum, part1 = File_Manipulation.get_file_information(1, File_Manipulation.full_format_file_part1)
-    part2_sum, part2 = File_Manipulation.get_file_information(1, File_Manipulation.full_format_file_part2)
+    part1_sum, part1 = File_Manipulation.full_format_file_part1.split(File_Manipulation.delimiter2.encode())
+    part2_sum, part2 = File_Manipulation.full_format_file_part2.split(File_Manipulation.delimiter2.encode())
     if not File_Manipulation.file_integrity_check(part1, part1_sum.decode()) or not File_Manipulation.file_integrity_check(part2, part2_sum.decode()):
         integrity_failed_closing_protocol("Integrity fail.")
     else:
         if data_check(part1) == "ok" and data_check(part2) == "ok":
-            if not File_Manipulation.get_file_information(0, part1, part2):
-                integrity_failed_closing_protocol("Integrity fail.")
-            AES_Encryption.update_data(File_Manipulation.unrecrypted_file_part1, KeyFile_Client.key, KeyFile_Client.nonce)
-            File_Manipulation.unrecrypted_file_part1 = AES_Encryption.decrypt()
-            AES_Encryption.update_data(File_Manipulation.unrecrypted_file_part2, KeyFile_Client.key, KeyFile_Client.nonce)
-            File_Manipulation.unrecrypted_file_part2 = AES_Encryption.decrypt()
-            File_Manipulation.reassemble_file()
+            File_Manipulation.get_file_information(0, part1, part2)
+            File_Manipulation.reassemble_file(1)
+            AES_Encryption.update_data(File_Manipulation.crypted_full_file, KeyFile_Client.key, KeyFile_Client.nonce, File_Manipulation.tag_first_encryption1)
+            File_Manipulation.uncrypted_file_part1 = AES_Encryption.decrypt()
             if not File_Manipulation.file_integrity_check(File_Manipulation.uncrypted_full_file, File_Manipulation.file_sum):
                 integrity_failed_closing_protocol("Integrity fail.")
             else:
+                File_Manipulation.reassemble_file(0)
                 print("-----RECEIVING FILE : END-----")
                 print(" ")
                 return True

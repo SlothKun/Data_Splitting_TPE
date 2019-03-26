@@ -150,80 +150,6 @@ def key_init():
         big_key_nonce.clear()
         return True
 
-'''
-def key_init():
-    print(" ")
-    print("-------KEY INIT : START----------")
-    big_key_nonce = []
-    KeyFile_Server2.big_key_nonce_generator()
-    KeyFile_Server2.key_choice()
-    KeyFile_Server1.big_key_nonce_generator()
-    KeyFile_Server1.key_choice()
-    KeyFile_Mine.big_key_nonce_generator()
-    KeyFile_Mine.key_choice()
-
-        if len(big_key_nonce) == 0:
-            print(" ")
-            print("-----BIG_KEY_NONCE S2 : START-----")
-            print("Clé choisie : ", KeyFile_Server2.key)
-            big_key_nonce.append(KeyFile_Server2.big_key_nonce_format(0))
-            bigkeynonce_sum = File_Manipulation.SHA512_checksum_creation(big_key_nonce[0].encode())
-            print("Somme du fichier : ", bigkeynonce_sum)
-            encrypted_key, tag, nonce = DH_Algorithm_Server2.encrypt((KeyFile_Server2.big_key_nonce_format(1, bigkeynonce_sum, big_key_nonce[0])))
-            print("tag créé : ", tag)
-            print("nonce créé : ", nonce)
-            Server2_conn.sending(KeyFile_Server2.big_key_nonce_format(2, tag, nonce, encrypted_key), 1)
-            print("-----BIG_KEY_NONCE S2 : END-----")
-            print("  ")
-        elif len(big_key_nonce) == 1:
-            print(" ")
-            print("-----BIG_KEY_NONCE S1 : START-----")
-            print("Clé choisie : ", KeyFile_Server1.key)
-            big_key_nonce.append(KeyFile_Server1.big_key_nonce_format(0))
-            bigkeynonce_sum = File_Manipulation.SHA512_checksum_creation(big_key_nonce[1].encode())
-            print("Somme du fichier : ", bigkeynonce_sum)
-            encrypted_key, tag, nonce = DH_Algorithm_Server1.encrypt((KeyFile_Server1.big_key_nonce_format(1, bigkeynonce_sum, big_key_nonce[1])))
-            print("tag créé : ", tag)
-            print("nonce créé : ", nonce)
-            Server1_conn.sending(KeyFile_Server1.big_key_nonce_format(2, tag, nonce, encrypted_key), 1)
-            print("-----BIG_KEY_NONCE S1 : START-----")
-            print("  ")
-        elif len(big_key_nonce) == 2:
-            print(" ")
-            print("-----BIG_KEY_NONCE C1 : START-----")
-            bigpart1, tag1, nonce1 = KeyFile_Client.get_big_key_nonce(0, Server1_conn.receiving(1))
-            bigpart2, tag2, nonce2 = KeyFile_Client.get_big_key_nonce(0, Server2_conn.receiving(1))
-            bigpart1 = DH_Algorithm_Client.decrypt(bigpart1, tag1, nonce1)
-            bigpart2 = DH_Algorithm_Client.decrypt(bigpart2, tag2, nonce2)
-            bigpart1_sum, bigpart1 = KeyFile_Client.get_big_key_nonce(1, bigpart1)
-            bigpart2_sum, bigpart2 = KeyFile_Client.get_big_key_nonce(1, bigpart2)
-            if not File_Manipulation.file_integrity_check(bigpart1, bigpart1_sum.decode()) or not File_Manipulation.file_integrity_check(bigpart2, bigpart2_sum.decode()):
-                integrity_failed_closing_protocol("Integrity fail.")
-            else:
-                if data_check(bigpart1[1]) == "ok" and data_check(bigpart2[1]) == "ok":
-                    bigfile = (bigpart1 + bigpart2)
-                    KeyFile_Client.get_big_key_nonce(2, bigfile)
-                    KeyFile_Client.key_choice()
-                    big_key_nonce.append(bigfile)
-            print("-----BIG_KEY_NONCE C1 : END-----")
-            print(" ")
-        elif len(big_key_nonce) == 3:
-            print(" ")
-            print("-----BIG_KEY_NONCE C2 : START-----")
-            big_key_nonce.append(KeyFile_Mine.big_key_nonce_format(0))
-            part1, part2 = File_Manipulation.split_file(big_key_nonce[2])
-            encrypted_key, tag, nonce = DH_Algorithm_Client.encrypt((KeyFile_Server1.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(part1.encode()), part1)))
-            Server1_conn.sending(KeyFile_Client.big_key_nonce_format(2, tag, nonce, encrypted_key), 1)
-            encrypted_key, tag, nonce = DH_Algorithm_Client.encrypt((KeyFile_Server2.big_key_nonce_format(1, File_Manipulation.SHA512_checksum_creation(part2.encode()), part2)))
-            Server2_conn.sending(KeyFile_Client.big_key_nonce_format(2, tag, nonce, encrypted_key), 1)
-            print("-----BIG_KEY_NONCE C2 : END-----")
-            print(" ")
-        elif len(big_key_nonce) == 4:
-            big_key_nonce.clear()
-            return True
-'''
-
-
 def sending_file():
     print(" ")
     print("-----SENDING FILE : START-----")
@@ -255,25 +181,28 @@ def receiving_file():
     # Part manipulation
     File_Manipulation.crypted_file_part1 = Server1_conn.receiving(1)
     File_Manipulation.crypted_file_part2 = Server2_conn.receiving(1)
-    AES_Encryption.update_data(File_Manipulation.crypted_file_part1, KeyFile_Server1.key, KeyFile_Server1.nonce, "")
+    File_Manipulation.tag_second_encryption1, File_Manipulation.crypted_file_part1 = File_Manipulation.crypted_file_part1.split(KeyFile_Server1.delimiter3.encode())
+    File_Manipulation.tag_second_encryption2, File_Manipulation.crypted_file_part2 = File_Manipulation.crypted_file_part2.split(KeyFile_Server2.delimiter3.encode())
+    AES_Encryption.update_data(File_Manipulation.crypted_file_part1, KeyFile_Server1.key, KeyFile_Server1.nonce.encode(), File_Manipulation.tag_second_encryption1)
     File_Manipulation.full_format_file_part1 = AES_Encryption.decrypt()
-    AES_Encryption.update_data(File_Manipulation.crypted_file_part2, KeyFile_Server2.key, KeyFile_Server2.nonce, "")
+    AES_Encryption.update_data(File_Manipulation.crypted_file_part2, KeyFile_Server2.key, KeyFile_Server2.nonce.encode(), File_Manipulation.tag_second_encryption2)
+    print("nonce CLIENT 2 : ", KeyFile_Server2.nonce)
+    print("Key CLIENT 2 : ", KeyFile_Server2.key)
     File_Manipulation.full_format_file_part2 = AES_Encryption.decrypt()
-    part1_sum, part1 = File_Manipulation.get_file_information(1, File_Manipulation.full_format_file_part1)
-    part2_sum, part2 = File_Manipulation.get_file_information(1, File_Manipulation.full_format_file_part2)
+    part1_sum, part1 = File_Manipulation.full_format_file_part1.split(File_Manipulation.delimiter2.encode())
+    part2_sum, part2 = File_Manipulation.full_format_file_part2.split(File_Manipulation.delimiter2.encode())
     if not File_Manipulation.file_integrity_check(part1, part1_sum.decode()) or not File_Manipulation.file_integrity_check(part2, part2_sum.decode()):
         integrity_failed_closing_protocol("Integrity fail.")
     else:
         if data_check(part1) == "ok" and data_check(part2) == "ok":
             File_Manipulation.get_file_information(0, part1, part2)
-            AES_Encryption.update_data(File_Manipulation.unrecrypted_file_part1, KeyFile_Client.key, KeyFile_Client.nonce, "")
-            File_Manipulation.unrecrypted_file_part1 = AES_Encryption.decrypt()
-            AES_Encryption.update_data(File_Manipulation.unrecrypted_file_part2, KeyFile_Client.key, KeyFile_Client.nonce, "")
-            File_Manipulation.unrecrypted_file_part2 = AES_Encryption.decrypt()
-            File_Manipulation.reassemble_file()
+            File_Manipulation.reassemble_file(1)
+            AES_Encryption.update_data(File_Manipulation.crypted_full_file, KeyFile_Client.key, KeyFile_Client.nonce, File_Manipulation.tag_first_encryption1)
+            File_Manipulation.uncrypted_file_part1 = AES_Encryption.decrypt()
             if not File_Manipulation.file_integrity_check(File_Manipulation.uncrypted_full_file, File_Manipulation.file_sum):
                 integrity_failed_closing_protocol("Integrity fail.")
             else:
+                File_Manipulation.reassemble_file(0)
                 print("-----RECEIVING FILE : END-----")
                 print(" ")
                 return True

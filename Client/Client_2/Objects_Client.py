@@ -89,6 +89,10 @@ class File:  # modify
         self.file_part2_sum = ""
         self.crypted_file_part2 = ""
         self.full_format_file_part2 = ""
+        self.tag_first_encryption1 = ""
+        self.tag_first_encryption2 = ""
+        self.tag_second_encryption1 = ""
+        self.tag_second_encryption2 = ""
 
     def reset_init(self):
         self.uncrypted_full_file = ""
@@ -106,9 +110,13 @@ class File:  # modify
         self.file_part2_sum = ""
         self.full_format_file_part2 = ""
         self.crypted_file_part2 = ""
+        self.tag_first_encryption1 = ""
+        self.tag_first_encryption2 = ""
+        self.tag_second_encryption1 = ""
+        self.tag_second_encryption2 = ""
 
     def ask_file(self):
-        with open(Client1_Interface.selection(), 'rb') as file_opened:
+        with open(Client2_Interface.selection(), 'rb') as file_opened:
             self.uncrypted_full_file = file_opened.read()
             full_file_name = ",".join(file_opened.name.rsplit("/", 1)[1:])
             self.file_name = ",".join(full_file_name.rsplit(".", 1)[:1])
@@ -122,15 +130,17 @@ class File:  # modify
                 name_from_part = []
                 file_sum_from_part = []
                 for data in file:
-                    splitted_informations = data.split(self.delimiter1)
+                    splitted_informations = data.split(self.delimiter1.encode())
                     if re.findall("[a-m]*[A-M]*[0-4]*", splitted_informations[0].decode()) != False:
                         extension_from_part.append(splitted_informations[1].decode())
                         name_from_part.append(splitted_informations[2].decode())
-                        self.unrecrypted_file_part1 = splitted_informations[3]
-                    elif re.findall("[h-n]*[H-N]*[5-9]*", splitted_informations[0].decode()) != False:
+                        self.tag_first_encryption1 = splitted_informations[3]
+                        self.unrecrypted_file_part1 = splitted_informations[4]
+                    elif re.findall("[h-n]*[H-N]*[5-9]*", splitted_informations[1].decode()) != False:
                         extension_from_part.append(splitted_informations[1].decode())
                         name_from_part.append(splitted_informations[2].decode())
-                        self.unrecrypted_file_part2 = splitted_informations[3]
+                        self.tag_first_encryption2 = splitted_informations[3]
+                        self.unrecrypted_file_part2 = splitted_informations[4]
 
                 part_1_list = [extension_from_part[0], name_from_part[0]]
                 part_2_list = [extension_from_part[1], name_from_part[1]]
@@ -149,7 +159,7 @@ class File:  # modify
                         elif i == 1:
                             return False
             elif mode == 1:
-                splitted_file = file.split(self.delimiter2)
+                splitted_file = file.split(self.delimiter2.encode())
                 return splitted_file[0], splitted_file[1]
 
     def split_file(self, data):
@@ -164,11 +174,15 @@ class File:  # modify
             print("sp data 2 : ", splitted_data2)
             return splitted_data1, splitted_data2
 
-    def reassemble_file(self):
-        f = open(self.file_name + "." + self.file_extension, "wb")
-        self.uncrypted_full_file = self.unrecrypted_file_part1 + self.unrecrypted_file_part2
-        f.write(self.uncrypted_full_file.encode())
-        f.close()
+    def reassemble_file(self, mode):
+        if mode == 0:
+            f = open(self.file_name + "." + self.file_extension, "wb")
+            f.write(self.uncrypted_full_file.encode())
+            f.close()
+        elif mode == 1:
+            print(type(self.unrecrypted_file_part1))
+            print(type(self.unrecrypted_file_part2))
+            self.crypted_full_file = (self.unrecrypted_file_part1 + self.unrecrypted_file_part2)
 
     def SHA512_checksum_creation(self, file):
         return hashlib.sha512(file).hexdigest()
@@ -331,15 +345,20 @@ class AES_Algorithm:
 
     def decrypt(self):
         try:
-            cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
+            cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce.encode())
             uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
             return uncrypted_data
         except AttributeError:
             try:
-                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
+                cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
                 uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
                 return uncrypted_data
             except AttributeError:
-                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
-                uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
-                return uncrypted_data
+                try:
+                    cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
+                    uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
+                    return uncrypted_data
+                except AttributeError:
+                    cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
+                    uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
+                    return uncrypted_data

@@ -86,7 +86,6 @@ class File:
         self.delimiter = "#&_#"
 
     def get_file_information(self, file):
-        print(self.delimiter.encode() in file)
         cuted_file = file.split(self.delimiter.encode())
         return cuted_file[0], cuted_file[1]
 
@@ -225,15 +224,20 @@ class AES_Algorithm:
 
     def decrypt(self):
         try:
-            cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
+            cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce.encode())
             uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
             return uncrypted_data
         except AttributeError:
             try:
-                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
+                cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
                 uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
                 return uncrypted_data
             except AttributeError:
-                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
-                uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
-                return uncrypted_data
+                try:
+                    cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
+                    uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
+                    return uncrypted_data
+                except AttributeError:
+                    cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
+                    uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
+                    return uncrypted_data

@@ -235,9 +235,9 @@ class Key:
         self.delimiter3 = "-)_)-_"
 
     def big_key_nonce_generator(self):
-        self.big_key_original = rstr.rstr('azertyuiopmlkjhgfdsqwxcvbnAZERTYUIOPMLKJHGFDSQWXCVBN0123456789', 64000)
+        self.big_key_original = rstr.rstr('azertyuiopmlkjhgfdsqwxcvbnAZERTYUIOPMLKJHGFDSQWXCVBN0123456789', 32000)
         self.big_key_modified = self.big_key_original
-        self.big_nonce_original = rstr.rstr('azertyuiopmlkjhgfdsqwxcvbnAZERTYUIOPMLKJHGFDSQWXCVBN0123456789', 64000)
+        self.big_nonce_original = rstr.rstr('azertyuiopmlkjhgfdsqwxcvbnAZERTYUIOPMLKJHGFDSQWXCVBN0123456789', 32000)
         self.big_nonce_modified = self.big_nonce_original
         return self.big_key_original, self.big_nonce_original
 

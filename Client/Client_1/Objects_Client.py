@@ -90,6 +90,7 @@ class File:  # modify
         self.file_part2_sum = ""
         self.crypted_file_part2 = ""
         self.full_format_file_part2 = ""
+        self.tag_first_encryption = ""
 
     def reset_init(self):
         self.uncrypted_full_file = ""
@@ -107,6 +108,7 @@ class File:  # modify
         self.file_part2_sum = ""
         self.full_format_file_part2 = ""
         self.crypted_file_part2 = ""
+        self.tag_first_encryption = ""
 
     def ask_file(self):
         with open(Client1_Interface.selection(), 'rb') as file_opened:
@@ -176,8 +178,8 @@ class File:  # modify
 
     def format_file(self, which_format):
         if which_format == 0:
-            self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1).encode() + self.delimiter1.encode() + self.file_extension.encode() + self.delimiter1.encode() + self.file_name.encode() + self.delimiter1.encode() + self.unrecrypted_file_part1
-            self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2).encode() + self.delimiter1.encode() + self.file_extension.encode() + self.delimiter1.encode() + self.file_name.encode() + self.delimiter1.encode() + self.unrecrypted_file_part2
+            self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1).encode() + self.delimiter1.encode() + self.file_extension.encode() + self.delimiter1.encode() + self.file_name.encode() + self.delimiter1.encode() + self.tag_first_encryption + self.delimiter1.encode() + self.unrecrypted_file_part1
+            self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2).encode() + self.delimiter1.encode() + self.file_extension.encode() + self.delimiter1.encode() + self.file_name.encode() + self.delimiter1.encode() + self.tag_first_encryption + self.delimiter1.encode() + self.unrecrypted_file_part2
         elif which_format == 1:
             self.full_format_file_part1 = self.file_part1_sum.encode() + self.delimiter2.encode() + self.full_format_file_part1
             self.full_format_file_part2 = self.file_part2_sum.encode() + self.delimiter2.encode() + self.full_format_file_part2
@@ -211,7 +213,7 @@ class DH_algorithm:
         self.private_key = self.private_key[int(len(str(self.private_key)) / 2):].encode()
 
     def encrypt(self, data):
-        nonce = ''.join(rstr.rstr("abcdefghijklmABCDEFGHIJKLM01234nopqrstuvwxyzNOPQRSTUVWXYZ56789", 14))
+        nonce = ''.join(rstr.rstr("abcdefghijklmABCDEFGHIJKLM01234nopqrstuvwxyzNOPQRSTUVWXYZ56789", 15))
         cipher = AES.new(self.private_key, AES.MODE_OCB, nonce=nonce.encode())
         crypted_key, tag = cipher.encrypt_and_digest(data.encode())
         return crypted_key, tag, nonce.encode()
@@ -319,16 +321,16 @@ class AES_Algorithm:
         try:
             cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce.encode())
             crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
-            return crypted_data
+            return crypted_data, self.tag
         except AttributeError:
             try:
                 cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
                 crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
-                return crypted_data
+                return crypted_data, self.tag
             except AttributeError:
                 cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
                 crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
-                return crypted_data
+                return crypted_data, self.tag
 
     def decrypt(self):
         try:
@@ -338,9 +340,9 @@ class AES_Algorithm:
         except AttributeError:
             try:
                 cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
-                uncrypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+                uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
                 return uncrypted_data
             except AttributeError:
                 cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
-                uncrypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+                uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
                 return uncrypted_data

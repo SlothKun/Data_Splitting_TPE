@@ -234,26 +234,29 @@ def sending_file():
     # Full file manipulation
     File_Manipulation.ask_file()
     AES_Encryption.update_data((File_Manipulation.file_sum.encode() + File_Manipulation.delimiter1.encode() + File_Manipulation.uncrypted_full_file), KeyFile_Mine.key, KeyFile_Mine.nonce, "")
-
-    File_Manipulation.crypted_full_file = AES_Encryption.encrypt()
+    File_Manipulation.crypted_full_file, File_Manipulation.tag_first_encryption = AES_Encryption.encrypt()
     # Part manipulation
     File_Manipulation.split_file(0)
     File_Manipulation.format_file(0)
     File_Manipulation.file_part1_sum = File_Manipulation.SHA512_checksum_creation(File_Manipulation.full_format_file_part1)
     File_Manipulation.file_part2_sum = File_Manipulation.SHA512_checksum_creation(File_Manipulation.full_format_file_part2)
     File_Manipulation.format_file(1)
+    print(File_Manipulation.full_format_file_part1)
     AES_Encryption.update_data(File_Manipulation.full_format_file_part1, KeyFile_Server1.key, KeyFile_Server1.nonce, "")
-    encrypted = AES_Encryption.encrypt()
+    encrypted, tag = AES_Encryption.encrypt()
+    print("tag : ", tag)
     print("Key S1 : ", KeyFile_Server1.key)
     print("Nonce S1 : ", KeyFile_Server1.nonce)
     print("Encrypted : ", encrypted)
-    Server1_conn.sending(encrypted, 1)
+    Server1_conn.sending((tag + KeyFile_Server1.delimiter3.encode() + encrypted), 1)
+
+
     AES_Encryption.update_data(File_Manipulation.full_format_file_part2, KeyFile_Server2.key, KeyFile_Server2.nonce, "")
-    encrypted = AES_Encryption.encrypt()
+    encrypted, tag = AES_Encryption.encrypt()
     print("Key S2 : ", KeyFile_Server2.key)
     print("Nonce S2 : ", KeyFile_Server2.nonce)
     print("Encrypted : ", encrypted)
-    Server2_conn.sending(encrypted, 1)
+    Server2_conn.sending((tag + KeyFile_Server1.delimiter3.encode() + encrypted), 1)
     print("-----SENDING FILE : END-----")
     print(" ")
     return False
@@ -361,12 +364,9 @@ def total_disconnection():
     danger = True
 
 sleep(5)
-i = 0
-
 
 while not s2_connected:
-    print("trying to connect to S2 : ", i, " times")
-    i += 1
+    print("trying to connect to S2 : ")
     s2_connected = conn_s(2)
     print("s2 state : ", s2_connected)
 while not s1_connected:
@@ -375,7 +375,7 @@ while not dh_initialised:
     dh_initialised, key_initialised = dh_init()
 while not key_initialised:
     key_initialised = key_init()
-while danger:
+while not danger:
     if my_turn:
         my_turn = sending_file()
     else:

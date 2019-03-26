@@ -363,7 +363,7 @@ while not dh_initialised:
     dh_initialised, key_initialised = dh_init()
 while not key_initialised:
     key_initialised = key_init()
-while danger:
+while not danger:
     if my_turn:
         my_turn = sending_file()
     else:

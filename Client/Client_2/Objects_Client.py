@@ -210,7 +210,7 @@ class DH_algorithm:
         self.private_key = self.private_key[int(len(str(self.private_key)) / 2):].encode()
 
     def encrypt(self, data):
-        nonce = ''.join(rstr.rstr("abcdefghijklmABCDEFGHIJKLM01234nopqrstuvwxyzNOPQRSTUVWXYZ56789", 14))
+        nonce = ''.join(rstr.rstr("abcdefghijklmABCDEFGHIJKLM01234nopqrstuvwxyzNOPQRSTUVWXYZ56789", 15))
         cipher = AES.new(self.private_key, AES.MODE_OCB, nonce=nonce.encode())
         crypted_key, tag = cipher.encrypt_and_digest(data.encode())
         return crypted_key, tag, nonce.encode()
@@ -318,16 +318,16 @@ class AES_Algorithm:
         try:
             cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce.encode())
             crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
-            return crypted_data
+            return crypted_data, self.tag
         except AttributeError:
             try:
                 cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
                 crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
-                return crypted_data
+                return crypted_data, self.tag
             except AttributeError:
                 cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
                 crypted_data, self.tag = cipher.encrypt_and_digest(self.data)
-                return crypted_data
+                return crypted_data, self.tag
 
     def decrypt(self):
         try:
@@ -337,9 +337,9 @@ class AES_Algorithm:
         except AttributeError:
             try:
                 cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
-                uncrypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+                uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
                 return uncrypted_data
             except AttributeError:
                 cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
-                uncrypted_data, self.tag = cipher.encrypt_and_digest(self.data)
+                uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
                 return uncrypted_data

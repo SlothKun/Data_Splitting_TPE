@@ -155,9 +155,7 @@ class Key:
     def nonce_choice(self):
         if self.n_choice == 0:
             self.n_choice = 1
-            print(self.big_nonce_modified)
             self.nonce = self.big_nonce_modified[-30:-15]
-            print(len(self.nonce))
         elif self.n_choice == 1:
             self.n_choice = 2
             self.nonce = self.big_nonce_modified[-15:]
@@ -179,7 +177,6 @@ class Key:
     def get_big_key_nonce(self, mode, data):
         if mode == 0:
             datas = data.split(self.delimiter3.encode())
-            print(len(datas))
             tag = datas[0]
             nonce = datas[2]
             e_data = datas[1]

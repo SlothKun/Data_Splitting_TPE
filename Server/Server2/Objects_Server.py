@@ -85,13 +85,7 @@ class File:
         self.delimiter = "#&_#"
 
     def get_file_information(self, file):
-        print("FILLLEEEEE")
-        print(file)
         cuted_file = file.split(self.delimiter.encode())
-        print("CUTED FIIILLLLLLEEEEEEEEEEEEEEE")
-        print(cuted_file)
-        print(type(cuted_file))
-        print(len(cuted_file))
         return cuted_file[0], cuted_file[1]
 
     def format_file(self, data, sum):
@@ -159,9 +153,7 @@ class Key:
     def nonce_choice(self):
         if self.n_choice == 0:
             self.n_choice = 1
-            print(self.big_nonce_modified)
             self.nonce = self.big_nonce_modified[-30:-15]
-            print(len(self.nonce))
         elif self.n_choice == 1:
             self.n_choice = 2
             self.nonce = self.big_nonce_modified[-15:]

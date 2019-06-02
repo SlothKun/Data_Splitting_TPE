@@ -34,7 +34,6 @@ class Server:
             print("in function")
             clientconnect, clientinfo = sock.accept()
             self.socket = clientconnect
-            print("conn accepted")
             ip, port = clientconnect.getpeername()
             if ip in self.whitelisted_client:  # Whitelist application
                 self.socket.send(b"ok")
@@ -96,9 +95,11 @@ class File:
         return hashlib.sha512(file).hexdigest()
 
     def file_integrity_check(self, data, sum):
-        if hashlib.sha512(data).hexdigest() == sum:
+        if hashlib.sha512(data).hexdigest() == sum.decode():
+            print("TRUE")
             return True
         else:
+            print("FALSE")
             return False
 
 
@@ -115,11 +116,11 @@ class DH_algorithm:
 
     def private_key_generator(self, friendkey):
         self.private_key = self.engine.gen_shared_key(int(friendkey))
-        print("key : ", self.private_key)
         self.private_key = self.private_key[int(len(str(self.private_key)) / 2):].encode()
 
     def encrypt(self, data):
-        nonce = ''.join(rstr.rstr("abcdefghijklmABCDEFGHIJKLM01234nopqrstuvwxyzNOPQRSTUVWXYZ56789", 15))
+        nonce = os.urandom(15)
+        #nonce = ''.join(rstr.rstr("abcdefghijklmABCDEFGHIJKLM01234nopqrstuvwxyzNOPQRSTUVWXYZ56789", 15))
         cipher = AES.new(self.private_key, AES.MODE_OCB, nonce=nonce.encode())
         crypted_key, tag = cipher.encrypt_and_digest(data.encode())
         return crypted_key, tag, nonce.encode()
@@ -162,6 +163,7 @@ class Key:
         elif self.n_choice == 2:
             self.n_choice = 0
             self.nonce = self.big_nonce_modified[:15]
+        print("the chosen nonce is : ", self.nonce)
 
     def key_choice(self):
         if self.k_choice == 0:
@@ -173,21 +175,25 @@ class Key:
         elif self.k_choice == 2:
             self.k_choice = 0
             self.key = self.big_key_modified[-64:-32]
+        print("the chosen key is : ", self.key)
 
     def get_big_key_nonce(self, mode, data):
         if mode == 0:
             datas = data.split(self.delimiter3.encode())
             tag = datas[0]
+            print("Tag : ", tag)
             nonce = datas[2]
-            e_data = datas[1]
-            return e_data, tag, nonce
+            print("Nonce : ", nonce)
+            cryptedbigkeynonce = datas[1]
+            print("cbkn : ", cryptedbigkeynonce[:15])
+            return cryptedbigkeynonce, tag, nonce
         elif mode == 1:
             splitted_data = data.split(self.delimiter2.encode())
             checksum = splitted_data[0]
             key_nonce = splitted_data[1]
             return checksum, key_nonce
         elif mode == 2:
-            data_splitted = data.split(self.delimiter1.encode())
+            data_splitted = data.decode().split(self.delimiter1)
             self.big_key_original = data_splitted[0]
             self.big_key_modified = self.big_key_original
             self.big_nonce_original = data_splitted[1]

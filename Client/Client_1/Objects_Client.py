@@ -15,7 +15,7 @@ from Crypto.Cipher import AES
 from Crypto import Random
 import base64
 from time import sleep
-import Client1_Interface
+import os
 
 class Client:
     def __init__(self, serverhost, port):
@@ -35,7 +35,6 @@ class Client:
             sock.connect((self.serverhost, self.port_listening))
             self.socket = sock
             if self.socket.recv(4096) == b'ok':
-                print("connected S2")
                 print("---- ESTA CONN SUCCESS ------")
                 return True
             else:
@@ -90,6 +89,7 @@ class File:  # modify
         self.file_part2_sum = ""
         self.crypted_file_part2 = ""
         self.full_format_file_part2 = ""
+
         self.tag_first_encryption1 = ""
         self.tag_first_encryption2 = ""
         self.tag_second_encryption1 = ""
@@ -117,12 +117,17 @@ class File:  # modify
         self.tag_second_encryption2 = ""
 
     def ask_file(self):
-        with open(Client1_Interface.selection(), 'rb') as file_opened:
+        with open(askopenfilename(), 'rb') as file_opened:
             self.uncrypted_full_file = file_opened.read()
+            print("file binary :", self.uncrypted_full_file)
             full_file_name = ",".join(file_opened.name.rsplit("/", 1)[1:])
+            print("full file name : ", full_file_name)
             self.file_name = ",".join(full_file_name.rsplit(".", 1)[:1])
+            print("file name : ", self.file_name)
             self.file_extension = ",".join(full_file_name.rsplit(".", 1)[1:])
+            print("file extension : ", self.file_extension)
             self.file_sum = self.SHA512_checksum_creation(self.uncrypted_full_file)
+            print("file sum : ", self.file_sum)
             file_opened.close()
 
     def get_file_information(self, mode, *file):
@@ -182,15 +187,19 @@ class File:  # modify
         f.close()
 
     def SHA512_checksum_creation(self, file):
-        return hashlib.sha512(file).hexdigest()
+        print("file checksum crea : ", file[:15])
+        return hashlib.sha512(file.encode()).hexdigest()
 
     def format_file(self, which_format):
-        if which_format == 0:
+        if which_format == "part_format":
             self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1).encode() + self.delimiter1.encode() + self.file_extension.encode() + self.delimiter1.encode() + self.file_name.encode() + self.delimiter1.encode() + self.tag_first_encryption + self.delimiter1.encode() + self.unrecrypted_file_part1
             self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2).encode() + self.delimiter1.encode() + self.file_extension.encode() + self.delimiter1.encode() + self.file_name.encode() + self.delimiter1.encode() + self.tag_first_encryption + self.delimiter1.encode() + self.unrecrypted_file_part2
-        elif which_format == 1:
+        elif which_format == "last_format":
             self.full_format_file_part1 = self.file_part1_sum.encode() + self.delimiter2.encode() + self.full_format_file_part1
             self.full_format_file_part2 = self.file_part2_sum.encode() + self.delimiter2.encode() + self.full_format_file_part2
+        elif which_format == "file_format":
+            print('you fool')
+
 
     def part_format_generator(self, size, part_number):
         if part_number == 1:
@@ -203,7 +212,6 @@ class File:  # modify
             return True
         else:
             return False
-
 
 class DH_algorithm:
     def __init__(self):
@@ -221,10 +229,13 @@ class DH_algorithm:
         self.private_key = self.private_key[int(len(str(self.private_key)) / 2):].encode()
 
     def encrypt(self, data):
-        nonce = ''.join(rstr.rstr("abcdefghijklmABCDEFGHIJKLM01234nopqrstuvwxyzNOPQRSTUVWXYZ56789", 15))
-        cipher = AES.new(self.private_key, AES.MODE_OCB, nonce=nonce.encode())
+        nonce = os.urandom(15)
+        print("NONCE : ", nonce)
+        print("LEN NONCE : ", len(nonce))
+        sleep(1)
+        cipher = AES.new(self.private_key, AES.MODE_OCB, nonce=nonce)
         crypted_key, tag = cipher.encrypt_and_digest(data.encode())
-        return crypted_key, tag, nonce.encode()
+        return crypted_key, tag, nonce
 
     def decrypt(self, data, tag, nonce):
         cipher = AES.new(self.private_key, AES.MODE_OCB, nonce=nonce)
@@ -246,9 +257,9 @@ class Key:
         self.delimiter3 = "-)_)-_"
 
     def big_key_nonce_generator(self):
-        self.big_key_original = rstr.rstr('azertyuiopmlkjhgfdsqwxcvbnAZERTYUIOPMLKJHGFDSQWXCVBN0123456789', 32000)
+        self.big_key_original = rstr.rstr('azertyuiopmlkjhgfdsqwxcvbnAZERTYUIOPMLKJHGFDSQWXCVBN0123456789', 16000)
         self.big_key_modified = self.big_key_original
-        self.big_nonce_original = rstr.rstr('azertyuiopmlkjhgfdsqwxcvbnAZERTYUIOPMLKJHGFDSQWXCVBN0123456789', 32000)
+        self.big_nonce_original = rstr.rstr('azertyuiopmlkjhgfdsqwxcvbnAZERTYUIOPMLKJHGFDSQWXCVBN0123456789', 16000)
         self.big_nonce_modified = self.big_nonce_original
         return self.big_key_original, self.big_nonce_original
 
@@ -262,15 +273,14 @@ class Key:
     def nonce_choice(self):
         if self.n_choice == 0:
             self.n_choice = 1
-            print(self.big_nonce_modified)
             self.nonce = self.big_nonce_modified[-30:-15]
-            print(len(self.nonce))
         elif self.n_choice == 1:
             self.n_choice = 2
             self.nonce = self.big_nonce_modified[-15:]
         elif self.n_choice == 2:
             self.n_choice = 0
             self.nonce = self.big_nonce_modified[:15]
+        print("the chosen nonce is : ", self.nonce)
 
     def key_choice(self):
         if self.k_choice == 0:
@@ -282,24 +292,27 @@ class Key:
         elif self.k_choice == 2:
             self.k_choice = 0
             self.key = self.big_key_modified[-64:-32]
+        print("the chosen key is : ", self.key)
 
     def get_big_key_nonce(self, mode, data):
         if mode == 0:
             datas = data.split(self.delimiter3.encode())
             tag = datas[0]
+            print("Tag : ", tag)
             nonce = datas[2]
-            e_data = datas[1]
-            return e_data, tag, nonce
+            print("Nonce : ", nonce)
+            cryptedbigkeynonce = datas[1]
+            print("cbkn : ", cryptedbigkeynonce)
+            return cryptedbigkeynonce, tag, nonce
         elif mode == 1:
             splitted_data = data.split(self.delimiter2.encode())
             checksum = splitted_data[0]
             key_nonce = splitted_data[1]
             return checksum, key_nonce
         elif mode == 2:
-            data_splitted = data.split(self.delimiter1.encode())
-            self.big_key_original = data_splitted[0]
+            self.big_key_original = data[0]
             self.big_key_modified = self.big_key_original
-            self.big_nonce_original = data_splitted[1]
+            self.big_nonce_original = data[1]
             self.big_nonce_modified = self.big_nonce_original
 
     def big_key_nonce_format(self, mode, *datas):

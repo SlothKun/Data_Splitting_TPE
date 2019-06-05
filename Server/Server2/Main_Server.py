@@ -166,8 +166,30 @@ while not c1_complete:
         cryptedfile, tag = AES_Encryption.encrypt()
         f_cryptedfile = File_Manipulation.format_file(cryptedfile, tag)
         Client2_conn.sending(f_cryptedfile, 1)
+        c1_complete = True
+        c2_complete = False
+        print("C1_complete : DONE")
 print("----- C1 SENDING FILE : END -----")
 
 print("----- C2 SENDING FILE : START -----")
+while not c2_complete:
+    KeyFile_Client1.key_nonce_reload()
+    KeyFile_Client2.key_nonce_reload()
+    f_cryptedfile = Client2_conn.receiving(1)
+    tag, cryptedfile = File_Manipulation.get_file_information(1, f_cryptedfile)
+    AES_Encryption.update_data(cryptedfile, KeyFile_Client2.key, KeyFile_Client2.nonce, tag)
+    full_file = AES_Encryption.decrypt()
+    file_sum, file = File_Manipulation.get_file_information(0, full_file)
+    if not File_Manipulation.file_integrity_check(file, file_sum):
+        danger = True
+        print("DANGER OVER HERE")
+    else:
+        AES_Encryption.update_data(full_file, KeyFile_Client1.key, KeyFile_Client1.nonce, "")
+        cryptedfile, tag = AES_Encryption.encrypt()
+        f_cryptedfile = File_Manipulation.format_file(cryptedfile, tag)
+        Client1_conn.sending(f_cryptedfile, 1)
+        c1_complete = False
+        c2_complete = True
+        print("C2_complete : DONE")
 print("----- C2 SENDING FILE : END -----")
 print("-------- SENDING/RECEIVING FILE : END --------")

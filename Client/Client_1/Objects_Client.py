@@ -139,13 +139,17 @@ class File:  # modify
                 name_from_part = []
                 file_sum_from_part = []
                 for data in file:
+                    print("data : ", data[:15])
                     splitted_informations = data.split(self.delimiter1.encode())
-                    if re.findall("[a-m]*[A-M]*[0-4]*", splitted_informations[0].decode()) != False:
+                    print("splitted info 0 : ", splitted_informations[0].decode())
+                    if bool(re.findall("^[a-m A-M 0-4]*$", splitted_informations[0].decode())) == True:
+                        print('FOUND 1')
                         extension_from_part.append(splitted_informations[1].decode())
                         name_from_part.append(splitted_informations[2].decode())
                         self.tag_first_encryption1 = splitted_informations[3]
                         self.unrecrypted_file_part1 = splitted_informations[4]
-                    elif re.findall("[h-n]*[H-N]*[5-9]*", splitted_informations[0].decode()) != False:
+                    elif bool(re.findall("^[h-z H-Z 5-9]*$", splitted_informations[0].decode())) == True:
+                        print('FOUND 2')
                         extension_from_part.append(splitted_informations[1].decode())
                         name_from_part.append(splitted_informations[2].decode())
                         self.tag_first_encryption2 = splitted_informations[3]
@@ -160,8 +164,7 @@ class File:  # modify
                             self.file_extension = parameter_part1
                         elif i == 1:
                             self.file_name = parameter_part1
-                        else:
-                            i += 1
+                        i += 1
                     else:
                         if i == 0:
                             return False
@@ -180,7 +183,7 @@ class File:  # modify
                         self.file_part2_sum = splitted_file[0]
                         self.full_format_file_part2 = splitted_file[1]
             elif mode == 2:
-                splitted_file = file.split(self.delimiter1.encode())
+                splitted_file = file[0].split(self.delimiter1.encode())
                 self.file_sum = splitted_file[0]
                 self.uncrypted_full_file = splitted_file[1]
 
@@ -198,10 +201,12 @@ class File:  # modify
 
     def reassemble_file(self, mode):
         if mode == 0:
+            print("part1 :", self.unrecrypted_file_part1[:15])
+            print("part2 :", self.unrecrypted_file_part2[:15])
             self.crypted_full_file = self.unrecrypted_file_part1 + self.unrecrypted_file_part2
         elif mode == 1:
             f = open(self.file_name + "." + self.file_extension, "wb")
-            f.write(self.uncrypted_full_file.encode())
+            f.write(self.uncrypted_full_file)
             f.close()
 
     def SHA512_checksum_creation(self, file):

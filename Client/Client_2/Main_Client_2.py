@@ -203,34 +203,6 @@ print("----- KEY INIT C1 SEND : END -----")
 print("-------- KEY INIT : END --------")
 
 print("-------- SENDING/RECEIVING FILE : START --------")
-print("----- C2 SENDING FILE : START -----")
-while my_turn:
-    KeyFile_Mine.key_nonce_reload()
-    KeyFile_Server1.key_nonce_reload()
-    KeyFile_Server2.key_nonce_reload()
-    File_Manipulation.reset_init()
-    File_Manipulation.ask_file()
-    print("uncrypted_full_file : ", File_Manipulation.uncrypted_full_file[:15])
-    # format sum + file
-    file_format = File_Manipulation.format_file("file_format")
-    AES_Encryption.update_data(file_format, KeyFile_Mine.key, KeyFile_Mine.nonce, "")
-    File_Manipulation.crypted_full_file, File_Manipulation.tag_first_encryption1 = AES_Encryption.encrypt()
-    File_Manipulation.split_file(0)
-    # parts format
-    File_Manipulation.format_file("part_format")
-    File_Manipulation.file_part1_sum = File_Manipulation.SHA512_checksum_creation(File_Manipulation.full_format_file_part1)
-    File_Manipulation.file_part2_sum = File_Manipulation.SHA512_checksum_creation(File_Manipulation.full_format_file_part2)
-    File_Manipulation.format_file("last_format")
-    # parts encryption
-    AES_Encryption.update_data(File_Manipulation.full_format_file_part1, KeyFile_Server1.key, KeyFile_Server1.nonce, "")
-    File_Manipulation.full_format_file_part1, File_Manipulation.tag_second_encryption1 = AES_Encryption.encrypt()
-    AES_Encryption.update_data(File_Manipulation.full_format_file_part2, KeyFile_Server2.key, KeyFile_Server2.nonce, "")
-    File_Manipulation.full_format_file_part2, File_Manipulation.tag_second_encryption2 = AES_Encryption.encrypt()
-    Server1_conn.sending(File_Manipulation.format_file("format_bef_send1"), 1)
-    Server2_conn.sending(File_Manipulation.format_file("format_bef_send2"), 1)
-    my_turn = False
-print("----- C2 SENDING FILE : END -----")
-
 print("----- RECEIVING FILE : START -----")
 while not my_turn:
     # Change key/nonce and reset File_Manipulation's variables
@@ -278,6 +250,34 @@ while not my_turn:
         else:
             File_Manipulation.reassemble_file(1)
             print("DONE !")
-            break
+            my_turn = True
 print("----- RECEIVING FILE : END -----")
+
+print("----- C2 SENDING FILE : START -----")
+while my_turn:
+    KeyFile_Mine.key_nonce_reload()
+    KeyFile_Server1.key_nonce_reload()
+    KeyFile_Server2.key_nonce_reload()
+    File_Manipulation.reset_init()
+    File_Manipulation.ask_file()
+    print("uncrypted_full_file : ", File_Manipulation.uncrypted_full_file[:15])
+    # format sum + file
+    file_format = File_Manipulation.format_file("file_format")
+    AES_Encryption.update_data(file_format, KeyFile_Mine.key, KeyFile_Mine.nonce, "")
+    File_Manipulation.crypted_full_file, File_Manipulation.tag_first_encryption1 = AES_Encryption.encrypt()
+    File_Manipulation.split_file(0)
+    # parts format
+    File_Manipulation.format_file("part_format")
+    File_Manipulation.file_part1_sum = File_Manipulation.SHA512_checksum_creation(File_Manipulation.full_format_file_part1)
+    File_Manipulation.file_part2_sum = File_Manipulation.SHA512_checksum_creation(File_Manipulation.full_format_file_part2)
+    File_Manipulation.format_file("last_format")
+    # parts encryption
+    AES_Encryption.update_data(File_Manipulation.full_format_file_part1, KeyFile_Server1.key, KeyFile_Server1.nonce, "")
+    File_Manipulation.full_format_file_part1, File_Manipulation.tag_second_encryption1 = AES_Encryption.encrypt()
+    AES_Encryption.update_data(File_Manipulation.full_format_file_part2, KeyFile_Server2.key, KeyFile_Server2.nonce, "")
+    File_Manipulation.full_format_file_part2, File_Manipulation.tag_second_encryption2 = AES_Encryption.encrypt()
+    Server1_conn.sending(File_Manipulation.format_file("format_bef_send1"), 1)
+    Server2_conn.sending(File_Manipulation.format_file("format_bef_send2"), 1)
+    my_turn = False
+print("----- C2 SENDING FILE : END -----")
 print("-------- SENDING/RECEIVING FILE : END --------")

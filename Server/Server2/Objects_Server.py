@@ -83,16 +83,25 @@ class Server:
 class File:
     def __init__(self):
         self.delimiter = "#&_#"
+        self.delimiter2 = "-)_)-_"
 
-    def get_file_information(self, file):
-        cuted_file = file.split(self.delimiter.encode())
-        return cuted_file[0], cuted_file[1]
+    def get_file_information(self, format, file):
+        if format == 0:
+            cuted_file = file.split(self.delimiter.encode())
+            return cuted_file[0], cuted_file[1]
+        if format == 1:
+            cuted_file = file.split(self.delimiter2.encode())
+            return cuted_file[0], cuted_file[1]
 
-    def format_file(self, data, sum):
-        return sum + self.delimiter.encode() + data
+    def format_file(self, data, tag):
+        return (tag + self.delimiter2.encode() + data)
 
     def SHA512_checksum_creation(self, file):
-        return hashlib.sha512(file).hexdigest()
+        print("file checksum crea : ", file[:15])
+        try:
+            return hashlib.sha512(file.encode()).hexdigest()
+        except AttributeError:
+            return hashlib.sha512(file).hexdigest()
 
     def file_integrity_check(self, data, sum):
         if hashlib.sha512(data).hexdigest() == sum.decode():
@@ -146,13 +155,14 @@ class Key:
         self.delimiter2 = ")-_-_("
         self.delimiter3 = "-)_)-_"
 
-    def key_nonce_length_check(self):
+    def key_nonce_reload(self):
         if len(self.big_key_modified) <= 32:
             return False
         elif len(self.big_nonce_modified) <= 512:
             self.key_choice()
             self.big_nonce_modified = self.big_nonce_original
-
+        else:
+            self.nonce_choice()
     def nonce_choice(self):
         if self.n_choice == 0:
             self.n_choice = 1

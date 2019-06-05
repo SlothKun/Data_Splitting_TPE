@@ -32,6 +32,8 @@ key_c1_status = False
 key_c2_status = False
 key_c1_sender_status = False
 key_c2_sender_status = False
+c1_complete = False
+c2_complete = True
 
 sleep(3)  # We wait 3 sec before doing something, to maintain relative sync
 
@@ -146,3 +148,26 @@ while not key_c2_sender_status:
 print("----- KEY INIT C2 SENDER : END -----")
 print("-------- KEY INIT : END --------")
 
+print("-------- SENDING/RECEIVING FILE : START --------")
+print("----- C1 SENDING FILE : START -----")
+while not c1_complete:
+    KeyFile_Client1.key_nonce_reload()
+    KeyFile_Client2.key_nonce_reload()
+    f_cryptedfile = Client1_conn.receiving(1)
+    tag, cryptedfile = File_Manipulation.get_file_information(1, f_cryptedfile)
+    AES_Encryption.update_data(cryptedfile, KeyFile_Client1.key, KeyFile_Client1.nonce, tag)
+    full_file = AES_Encryption.decrypt()
+    file_sum, file = File_Manipulation.get_file_information(0, full_file)
+    if not File_Manipulation.file_integrity_check(file, file_sum):
+        danger = True
+        print("DANGER OVER HERE")
+    else:
+        AES_Encryption.update_data(full_file, KeyFile_Client2.key, KeyFile_Client2.nonce, "")
+        cryptedfile, tag = AES_Encryption.encrypt()
+        f_cryptedfile = File_Manipulation.format_file(cryptedfile, tag)
+        Client2_conn.sending(f_cryptedfile, 1)
+print("----- C1 SENDING FILE : END -----")
+
+print("----- C2 SENDING FILE : START -----")
+print("----- C2 SENDING FILE : END -----")
+print("-------- SENDING/RECEIVING FILE : END --------")

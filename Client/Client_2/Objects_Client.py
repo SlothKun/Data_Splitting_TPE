@@ -81,11 +81,14 @@ class File:  # modify
         self.crypted_full_file = ""
         self.delimiter1 = "$\-$"
         self.delimiter2 = "#&_#"
+        self.delimiter3 = "-)_)-_"
 
+        self.unrecrypted_file_part1 = ""
         self.file_part1_sum = ""
         self.crypted_file_part1 = ""
         self.full_format_file_part1 = ""
 
+        self.unrecrypted_file_part2 = ""
         self.file_part2_sum = ""
         self.crypted_file_part2 = ""
         self.full_format_file_part2 = ""
@@ -136,13 +139,17 @@ class File:  # modify
                 name_from_part = []
                 file_sum_from_part = []
                 for data in file:
+                    print("data : ", data[:15])
                     splitted_informations = data.split(self.delimiter1.encode())
-                    if re.findall("[a-m]*[A-M]*[0-4]*", splitted_informations[0].decode()) != False:
+                    print("splitted info 0 : ", splitted_informations[0].decode())
+                    if bool(re.findall("^[a-m A-M 0-4]*$", splitted_informations[0].decode())) == True:
+                        print('FOUND 1')
                         extension_from_part.append(splitted_informations[1].decode())
                         name_from_part.append(splitted_informations[2].decode())
                         self.tag_first_encryption1 = splitted_informations[3]
                         self.unrecrypted_file_part1 = splitted_informations[4]
-                    elif re.findall("[h-n]*[H-N]*[5-9]*", splitted_informations[0].decode()) != False:
+                    elif bool(re.findall("^[h-z H-Z 5-9]*$", splitted_informations[0].decode())) == True:
+                        print('FOUND 2')
                         extension_from_part.append(splitted_informations[1].decode())
                         name_from_part.append(splitted_informations[2].decode())
                         self.tag_first_encryption2 = splitted_informations[3]
@@ -157,16 +164,28 @@ class File:  # modify
                             self.file_extension = parameter_part1
                         elif i == 1:
                             self.file_name = parameter_part1
-                        else:
-                            i += 1
+                        i += 1
                     else:
                         if i == 0:
                             return False
                         elif i == 1:
                             return False
             elif mode == 1:
-                splitted_file = file.split(self.delimiter2)
-                return splitted_file[0], splitted_file[1]
+                i = 0
+                for x in file:
+                    if i == 0:
+                        splitted_file = x.split(self.delimiter2.encode())
+                        self.file_part1_sum = splitted_file[0]
+                        self.full_format_file_part1 = splitted_file[1]
+                        i += 1
+                    if i == 1:
+                        splitted_file = x.split(self.delimiter2.encode())
+                        self.file_part2_sum = splitted_file[0]
+                        self.full_format_file_part2 = splitted_file[1]
+            elif mode == 2:
+                splitted_file = file[0].split(self.delimiter1.encode())
+                self.file_sum = splitted_file[0]
+                self.uncrypted_full_file = splitted_file[1]
 
     def split_file(self, data):
         if data == 0:
@@ -180,26 +199,36 @@ class File:  # modify
             print("sp data 2 : ", splitted_data2)
             return splitted_data1, splitted_data2
 
-    def reassemble_file(self):
-        f = open(self.file_name + "." + self.file_extension, "wb")
-        self.uncrypted_full_file = self.unrecrypted_file_part1 + self.unrecrypted_file_part2
-        f.write(self.uncrypted_full_file.encode())
-        f.close()
+    def reassemble_file(self, mode):
+        if mode == 0:
+            print("part1 :", self.unrecrypted_file_part1[:15])
+            print("part2 :", self.unrecrypted_file_part2[:15])
+            self.crypted_full_file = self.unrecrypted_file_part1 + self.unrecrypted_file_part2
+        elif mode == 1:
+            f = open(self.file_name + "." + self.file_extension, "wb")
+            f.write(self.uncrypted_full_file)
+            f.close()
 
     def SHA512_checksum_creation(self, file):
         print("file checksum crea : ", file[:15])
-        return hashlib.sha512(file.encode()).hexdigest()
+        try:
+            return hashlib.sha512(file.encode()).hexdigest()
+        except AttributeError:
+            return hashlib.sha512(file).hexdigest()
 
     def format_file(self, which_format):
         if which_format == "part_format":
-            self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1).encode() + self.delimiter1.encode() + self.file_extension.encode() + self.delimiter1.encode() + self.file_name.encode() + self.delimiter1.encode() + self.tag_first_encryption + self.delimiter1.encode() + self.unrecrypted_file_part1
-            self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2).encode() + self.delimiter1.encode() + self.file_extension.encode() + self.delimiter1.encode() + self.file_name.encode() + self.delimiter1.encode() + self.tag_first_encryption + self.delimiter1.encode() + self.unrecrypted_file_part2
+            self.full_format_file_part1 = self.part_format_generator(random.randint(5, 10), 1).encode() + self.delimiter1.encode() + self.file_extension.encode() + self.delimiter1.encode() + self.file_name.encode() + self.delimiter1.encode() + self.tag_first_encryption1 + self.delimiter1.encode() + self.unrecrypted_file_part1
+            self.full_format_file_part2 = self.part_format_generator(random.randint(5, 10), 2).encode() + self.delimiter1.encode() + self.file_extension.encode() + self.delimiter1.encode() + self.file_name.encode() + self.delimiter1.encode() + self.tag_first_encryption1 + self.delimiter1.encode() + self.unrecrypted_file_part2
         elif which_format == "last_format":
             self.full_format_file_part1 = self.file_part1_sum.encode() + self.delimiter2.encode() + self.full_format_file_part1
             self.full_format_file_part2 = self.file_part2_sum.encode() + self.delimiter2.encode() + self.full_format_file_part2
         elif which_format == "file_format":
-            print('you fool')
-
+            return (self.file_sum.encode() + self.delimiter1.encode() + self.uncrypted_full_file)
+        elif which_format == "format_bef_send1":
+            return (self.tag_second_encryption1 + self.delimiter3.encode() + self.full_format_file_part1)
+        elif which_format == "format_bef_send2":
+            return (self.tag_second_encryption2 + self.delimiter3.encode() + self.full_format_file_part2)
 
     def part_format_generator(self, size, part_number):
         if part_number == 1:
@@ -263,12 +292,14 @@ class Key:
         self.big_nonce_modified = self.big_nonce_original
         return self.big_key_original, self.big_nonce_original
 
-    def key_nonce_length_check(self):
+    def key_nonce_reload(self):
         if len(self.big_key_modified) <= 32:
             return False
         elif len(self.big_nonce_modified) <= 512:
             self.key_choice()
             self.big_nonce_modified = self.big_nonce_original
+        else:
+            self.nonce_choice()
 
     def nonce_choice(self):
         if self.n_choice == 0:
@@ -294,9 +325,9 @@ class Key:
             self.key = self.big_key_modified[-64:-32]
         print("the chosen key is : ", self.key)
 
-    def get_big_key_nonce(self, mode, data):
+    def get_big_key_nonce(self, mode, *data):
         if mode == 0:
-            datas = data.split(self.delimiter3.encode())
+            datas = data[0].split(self.delimiter3.encode())
             tag = datas[0]
             print("Tag : ", tag)
             nonce = datas[2]
@@ -305,7 +336,7 @@ class Key:
             print("cbkn : ", cryptedbigkeynonce)
             return cryptedbigkeynonce, tag, nonce
         elif mode == 1:
-            splitted_data = data.split(self.delimiter2.encode())
+            splitted_data = data[0].split(self.delimiter2.encode())
             checksum = splitted_data[0]
             key_nonce = splitted_data[1]
             return checksum, key_nonce
@@ -358,12 +389,17 @@ class AES_Algorithm:
             cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce)
             uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
             return uncrypted_data
-        except AttributeError:
+        except (TypeError, AttributeError) as error:
             try:
                 cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce.encode())
                 uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
                 return uncrypted_data
-            except AttributeError:
-                cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
-                uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
-                return uncrypted_data
+            except (TypeError, AttributeError) as error:
+                try:
+                    cipher = AES.new(self.key, AES.MODE_OCB, nonce=self.nonce)
+                    uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
+                    return uncrypted_data
+                except (TypeError, AttributeError) as error:
+                    cipher = AES.new(self.key.encode(), AES.MODE_OCB, nonce=self.nonce.encode())
+                    uncrypted_data = cipher.decrypt_and_verify(self.data, self.tag)
+                    return uncrypted_data

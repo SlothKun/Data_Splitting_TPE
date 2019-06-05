@@ -203,3 +203,65 @@ while not key_c_recv_status:
         key_c_recv_status = True
 print("----- KEY INIT C2 RECV : END -----")
 print("-------- KEY INIT : END --------")
+
+print("-------- SENDING/RECEIVING FILE : START --------")
+print("----- C1 SENDING FILE : START -----")
+while my_turn:
+    KeyFile_Mine.key_nonce_reload()
+    KeyFile_Server1.key_nonce_reload()
+    KeyFile_Server2.key_nonce_reload()
+    File_Manipulation.reset_init()
+    File_Manipulation.ask_file()
+    print("uncrypted_full_file : ", File_Manipulation.uncrypted_full_file[:15])
+    # format sum + file
+    file_format = File_Manipulation.format_file("file_format")
+    AES_Encryption.update_data(file_format, KeyFile_Mine.key, KeyFile_Mine.nonce, "")
+    File_Manipulation.crypted_full_file, File_Manipulation.tag_first_encryption1 = AES_Encryption.encrypt()
+    File_Manipulation.split_file(0)
+    # parts format
+    File_Manipulation.format_file("part_format")
+    File_Manipulation.file_part1_sum = File_Manipulation.SHA512_checksum_creation(File_Manipulation.full_format_file_part1)
+    File_Manipulation.file_part2_sum = File_Manipulation.SHA512_checksum_creation(File_Manipulation.full_format_file_part2)
+    print("full format file part 1 : ", File_Manipulation.full_format_file_part1[:15])
+    print("full format file part 2 : ", File_Manipulation.full_format_file_part2[:15])
+    File_Manipulation.format_file("last_format")
+    # parts encryption
+    AES_Encryption.update_data(File_Manipulation.full_format_file_part1, KeyFile_Server1.key, KeyFile_Server1.nonce, "")
+    File_Manipulation.full_format_file_part1, File_Manipulation.tag_second_encryption1 = AES_Encryption.encrypt()
+    AES_Encryption.update_data(File_Manipulation.full_format_file_part2, KeyFile_Server2.key, KeyFile_Server2.nonce, "")
+    File_Manipulation.full_format_file_part2, File_Manipulation.tag_second_encryption2 = AES_Encryption.encrypt()
+    Server1_conn.sending(File_Manipulation.format_file("format_bef_send1"), 1)
+    Server2_conn.sending(File_Manipulation.format_file("format_bef_send2"), 1)
+    my_turn = False
+print("----- C1 SENDING FILE : END -----")
+
+print("----- RECEIVING FILE : START -----")
+while not my_turn:
+    KeyFile_Client.key_nonce_reload()
+    KeyFile_Server1.key_nonce_reload()
+    KeyFile_Server2.key_nonce_reload()
+    File_Manipulation.reset_init()
+    File_Manipulation.crypted_file_part1 = Server1_conn.receiving(1)
+    File_Manipulation.crypted_file_part2 = Server2_conn.receiving(1)
+    File_Manipulation.tag_second_encryption1, File_Manipulation.crypted_file_part1 = File_Manipulation.crypted_file_part1.split(File_Manipulation.delimiter3.encode())
+    File_Manipulation.tag_second_encryption2, File_Manipulation.crypted_file_part2 = File_Manipulation.crypted_file_part2.split(File_Manipulation.delimiter3.encode())
+    AES_Encryption.update_data(File_Manipulation.crypted_file_part1, KeyFile_Server1.key, KeyFile_Server1.nonce, File_Manipulation.tag_second_encryption1)
+    File_Manipulation.full_format_file_part1 = AES_Encryption.decrypt()
+    AES_Encryption.update_data(File_Manipulation.crypted_file_part2, KeyFile_Server2.key, KeyFile_Server2.nonce, File_Manipulation.tag_second_encryption2)
+    File_Manipulation.full_format_file_part2 = AES_Encryption.decrypt()
+    File_Manipulation.get_file_informations(1, File_Manipulation.full_format_file_part1, File_Manipulation.full_format_file_part2)
+    if not File_Manipulation.file_integrity_check(File_Manipulation.full_format_file_part1, File_Manipulation.file_part1_sum) or not File_Manipulation.file_integrity_check(File_Manipulation.full_format_file_part2, File_Manipulation.file_part2_sum):
+        danger = True
+        print("DANGER OVER HERE")
+    else:
+        File_Manipulation.get_big_key_nonce(0, File_Manipulation.format_file_part1, File_Manipulation.format_file_part2)
+        File_Manipulation.reassemble_file(0)
+        AES_Encryption.update_data(File_Manipulation.crypted_full_file, KeyFile_Client.key, KeyFile_Client.nonce, File_Manipulation.tag_first_encryption1)
+        File_Manipulation.uncrypted_full_file = AES_Encryption.decrypt()
+        if not File_Manipulation.file_integrity_check(File_Manipulation.uncrypted_full_file, File_Manipulation.file_sum):
+            danger = True
+            print("DANGER OVER HERE")
+        else:
+            File_Manipulation.reassemble_file(1)
+print("----- RECEIVING FILE : END -----")
+print("-------- SENDING/RECEIVING FILE : END --------")

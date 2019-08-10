@@ -1,5 +1,6 @@
 # Data_Splitting_TPE
 Data splitting system
+Python 3.5.8
 
 This project was created for highschool project
 My project's goal is to create a secure transfer system using data splitting concept

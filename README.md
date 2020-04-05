@@ -3,7 +3,7 @@ Data splitting system
 
 Python 3.5.8
 
-This project was created for highschool project
+This program was created for my highschool project
 My project's goal is to create a secure transfer system using data splitting concept
 
 The system operation is kinda complex but to summarize there is 4 phases :
